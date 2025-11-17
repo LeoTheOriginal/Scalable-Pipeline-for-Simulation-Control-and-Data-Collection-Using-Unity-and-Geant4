@@ -1,0 +1,29 @@
+# Geant4
+geant4/Water-Phantom/build/
+geant4/Water-Phantom/Release/
+geant4/Water-Phantom/x64/
+
+# Unity
+unity/GeantML_Test/Library/
+unity/GeantML_Test/Temp/
+unity/GeantML_Test/Logs/
+unity/GeantML_Test/obj/
+
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Test outputs (jeśli nie chcesz wrzucać CSV z testów)
+python/tests/trajectory_buffer_geant4/**/event_*.csv
+
+# IDE (opcjonalnie, zależy czy chcesz dzielić ustawienia projektu)
+.idea/
+*.iml
+
+# Shared
+shared_data/*.root
+shared_data/*.hdf5
+
+projekt_tree.txt
+pipeline.log
