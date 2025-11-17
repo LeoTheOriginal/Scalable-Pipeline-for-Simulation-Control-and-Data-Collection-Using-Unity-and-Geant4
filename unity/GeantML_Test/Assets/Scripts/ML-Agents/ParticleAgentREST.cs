@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -13,6 +12,9 @@ using UnityEngine;
 [RequireComponent(typeof(TrailRenderer))]
 public class ParticleAgentREST : Agent
 {
+    [SerializeField] private bool serverInitialized = false;
+    [SerializeField] private bool serverInitializing = false;
+
     [Header("Agent Configuration")]
     [Tooltip("Unique agent ID")]
     public int agentId = 0;
@@ -79,13 +81,22 @@ public class ParticleAgentREST : Agent
         // Find REST client if not assigned
         if (restClient == null)
         {
-            restClient = FindObjectOfType<RestClient>();
+            // najpierw spróbuj z tego samego obiektu
+            restClient = GetComponent<RestClient>();
+
+            // jak nie ma – szukaj w scenie
+            if (restClient == null)
+            {
+                restClient = FindObjectOfType<RestClient>();
+            }
+
             if (restClient == null)
             {
                 Debug.LogError($"[ParticleAgent {agentId}] ❌ RestClient not found in scene!");
                 return;
             }
         }
+
 
         // Setup trail renderer
         trail = GetComponent<TrailRenderer>();
@@ -104,25 +115,19 @@ public class ParticleAgentREST : Agent
 
     public override void OnEpisodeBegin()
     {
-        // Reset position
+        // Reset lokalny
         transform.position = startPosition;
 
-        // Random initial energy
         initialEnergy = UnityEngine.Random.Range(energyRange.x, energyRange.y);
         currentEnergy = initialEnergy;
-
-        // 4π uniform direction sampling (Unity's Random.onUnitSphere is uniform)
         particleDirection = UnityEngine.Random.onUnitSphere;
 
-        // Reset counters
         episodeStepCount = 0;
         totalEpisodeReward = 0f;
         waitingForServerResponse = false;
 
-        // Clear trajectory recording
         recordedSteps.Clear();
 
-        // Store initial conditions
         episodeInitialConditions = new InitialConditions
         {
             particleType = "e-",
@@ -131,15 +136,16 @@ public class ParticleAgentREST : Agent
             initialDirection = new float[] { particleDirection.x, particleDirection.y, particleDirection.z }
         };
 
-        // Clear trail
         if (trail != null)
-        {
             trail.Clear();
-        }
 
-        // Initialize on server (only in per-step mode)
+        // 🔑 flagi serwera
+        serverInitialized = false;
+        serverInitializing = false;
+
         if (usePerStepMode)
         {
+            serverInitializing = true;
             StartCoroutine(restClient.InitializeAgent(
                 agentId,
                 "e-",
@@ -148,6 +154,9 @@ public class ParticleAgentREST : Agent
                 particleDirection,
                 success =>
                 {
+                    serverInitializing = false;
+                    serverInitialized = success;
+
                     if (!success)
                     {
                         Debug.LogError($"[ParticleAgent {agentId}] Failed to initialize on server!");
@@ -159,9 +168,10 @@ public class ParticleAgentREST : Agent
         if (showDebugInfo)
         {
             Debug.Log($"[ParticleAgent {agentId}] 🔄 Episode start: " +
-                     $"Energy={initialEnergy:F2} MeV, Dir={particleDirection}");
+                      $"Energy={initialEnergy:F2} MeV, Dir={particleDirection}");
         }
     }
+
 
     public override void CollectObservations(VectorSensor sensor)
     {
@@ -192,9 +202,13 @@ public class ParticleAgentREST : Agent
     public override void OnActionReceived(ActionBuffers actions)
     {
         // Don't act if waiting for server response (per-step mode only)
-        if (usePerStepMode && waitingForServerResponse)
+        if (usePerStepMode)
         {
-            return;
+            if (serverInitializing || !serverInitialized)
+                return;
+
+            if (waitingForServerResponse)
+                return;
         }
 
         // Get continuous actions [moveX, moveY, moveZ]
@@ -231,16 +245,17 @@ public class ParticleAgentREST : Agent
         // === MODE SELECTION ===
         if (usePerStepMode)
         {
-            // PER-STEP MODE: Send to server immediately for reward
+            // PER-STEP MODE: cała logika reward/termination jest po stronie serwera
             SendStepToServer(energyLoss);
         }
         else
         {
-            // EPISODE BATCH MODE: Just continue, will process at episode end
+            // EPISODE BATCH MODE: lokalny living penalty + lokalne termination
             AddReward(-0.001f);  // Small living penalty
             CheckLocalTermination();
         }
     }
+
 
     private void RecordStep(Vector3 prevPos, Vector3 newPos, float energyLoss)
     {
@@ -268,7 +283,7 @@ public class ParticleAgentREST : Agent
             OnServerResponse
         ));
 
-        AddReward(-0.001f);  // Small living penalty
+        //AddReward(-0.001f);  // Small living penalty
         CheckLocalTermination();
     }
 

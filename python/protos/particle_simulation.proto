@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package particle_sim;
+
+// Unity → Python: Current agent state
+message UnityStepRequest {
+    int32 agent_id = 1;
+
+    // Current particle state in Unity
+    ParticleState unity_state = 2;
+
+    // Initial conditions (sent once per episode)
+    optional ParticleInitialConditions initial_conditions = 3;
+}
+
+message ParticleState {
+    repeated float position = 1;  // [x, y, z] in cm
+    repeated float direction = 2; // [dx, dy, dz] normalized
+    float energy = 3;             // MeV
+    float energy_deposited = 4;   // MeV
+    int32 step_number = 5;
+}
+
+message ParticleInitialConditions {
+    string particle_type = 1;     // "e-", "gamma", etc.
+    float initial_energy = 2;     // MeV
+    repeated float initial_position = 3;
+    repeated float initial_direction = 4;
+}
+
+// Python → Unity: Geant4 ground truth + reward
+message Geant4StepResponse {
+    int32 agent_id = 1;
+
+    // Geant4 simulation results
+    ParticleState geant4_state = 2;
+
+    // Step reward
+    float reward = 3;
+
+    // Comparison metrics
+    StepComparison comparison = 4;
+
+    // Episode status
+    bool episode_done = 5;
+    string termination_reason = 6;
+}
+
+message StepComparison {
+    float position_error = 1;     // cm
+    float energy_error = 2;       // MeV
+    float direction_error = 3;    // radians
+}
+
+// gRPC service definition
+service ParticleSimulationService {
+    // Bidirectional streaming for real-time steps
+    rpc StreamSteps(stream UnityStepRequest)
+        returns (stream Geant4StepResponse);
+
+    // Batch processing (for parallel agents)
+    rpc ProcessBatch(BatchStepRequest)
+        returns (BatchStepResponse);
+}
+
+message BatchStepRequest {
+    repeated UnityStepRequest requests = 1;
+}
+
+message BatchStepResponse {
+    repeated Geant4StepResponse responses = 1;
+}

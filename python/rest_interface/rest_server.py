@@ -377,6 +377,7 @@ def get_buffer_status():
 
     Response:
     {
+        "success": true,
         "buffer_count": 456,
         "buffer_size": 1000,
         "buffer_utilization": 0.456,
@@ -391,7 +392,11 @@ def get_buffer_status():
 
         return jsonify({
             'success': True,
-            **stats
+            'buffer_count': stats['pending_trajectories'],
+            'buffer_size': stats['buffer_size'],
+            'buffer_utilization': stats['buffer_utilization'],
+            'total_received': stats['total_received'],
+            'total_processed': stats['total_processed'],
         })
 
     except Exception as e:
