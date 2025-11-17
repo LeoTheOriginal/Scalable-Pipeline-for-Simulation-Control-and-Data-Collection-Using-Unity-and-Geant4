@@ -1,0 +1,13 @@
+# Batch mode macro template for Python interface
+# Parameters will be substituted by Python script
+
+/run/initialize
+
+# Particle settings (will be replaced by Python)
+/gun/particle e-
+/gun/energy 10 MeV
+/gun/position -6.0 0.0 0.0 cm
+/gun/direction 1 0 0
+
+# Run simulation
+/run/beamOn 1

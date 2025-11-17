@@ -1,0 +1,27 @@
+/control/macroPath ../macros
+
+/run/initialize
+
+/vis/open OGL
+/vis/viewer/set/background 0 0 0
+/vis/viewer/set/autoRefresh true
+/vis/drawVolume
+#albo uzywasz accummulate albo refresh wyzej nie dwa na raz jak cos
+# /vis/scene/endOfEventAction accumulate  
+/vis/scene/add/axes 0 0 0 10 cm
+
+/tracking/storeTrajectory 1
+/vis/modeling/trajectories/create/drawByParticleID traj
+/vis/modeling/trajectories/traj/set e- yellow
+/vis/modeling/trajectories/traj/default/setLineWidth 1
+/vis/scene/add/trajectories traj
+/vis/viewer/set/globalLineWidthScale 1.5
+
+/vis/scene/add/trajectories rich
+
+/gun/particle e-
+/gun/energy 10 MeV
+/gun/position -6.0 0.0 0.0 cm
+/gun/direction 1 0 0
+
+/run/beamOn 1

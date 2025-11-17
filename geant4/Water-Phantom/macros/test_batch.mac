@@ -1,0 +1,13 @@
+# Simple batch test macro
+# Use: WaterPhantomSim.exe macros/test_batch.mac
+
+/run/initialize
+
+# Test with default electron
+/gun/particle e-
+/gun/energy 10 MeV
+/gun/position -6.0 0.0 0.0 cm
+/gun/direction 1 0 0
+
+# Run 3 events
+/run/beamOn 3
