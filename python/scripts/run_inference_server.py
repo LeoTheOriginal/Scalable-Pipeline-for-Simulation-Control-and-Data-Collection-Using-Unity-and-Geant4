@@ -51,57 +51,46 @@ class InferenceGenerator:
         self.sim_manager = geant4_sim.SimulationManager()
 
     def generate_comparison_batch(self, count=10):
-        """
-        Generuje dane porównawcze: Prawda vs AI.
-        """
-        # Bufory na dane prawdziwe (Real)
         real_x, real_y, real_z = [], [], []
-        # Bufory na dane przewidziane (AI)
         ai_x, ai_y, ai_z = [], [], []
 
-        for _ in range(count):
-            # A. Uruchom Geant4 (Prawda)
+        generated_count = 0
+
+        # Pętla Retry (tak samo ważna jak w start_simulation!)
+        while generated_count < count:
+
+            # A. Geant4 Run
             raw = self.sim_manager.run_single()
             steps = len(raw['x'])
 
-            # Pobieramy surowe wektory
+            if steps < 2: continue  # Pomiń puste cząstki
+
             rx, ry, rz = raw['x'], raw['y'], raw['z']
             px, py, pz = raw['px'], raw['py'], raw['pz']
             energy = raw['energy']
 
-            # B. Symulacja AI (Krok po kroku)
-            # AI startuje tam gdzie prawdziwa cząstka
-            current_ai_pos = np.array([rx[0], ry[0], rz[0]], dtype=np.float32)
+            # B. AI Simulation
+            # Pobieramy start z Geant4
+            current_state = np.array([
+                rx[0], ry[0], rz[0],
+                px[0], py[0], pz[0],
+                energy[0]
+            ], dtype=np.float32)
 
-            # Listy na ścieżkę jednej cząstki AI
-            path_ai_x = [current_ai_pos[0]]
-            path_ai_y = [current_ai_pos[1]]
-            path_ai_z = [current_ai_pos[2]]
+            # Listy na AI (inicjalizacja)
+            path_ai_x = [current_state[0]]
+            path_ai_y = [current_state[1]]
+            path_ai_z = [current_state[2]]
 
-            # Pętla predykcji
-            # Uwaga: AI używa 'Teacher Forcing' dla pędu/energii (bo jeszcze nie umie ich przewidywać)
-            # Ale pozycję aktualizujemy sami!
             for i in range(steps - 1):
-                # Budujemy obserwację: [x, y, z, px, py, pz, e]
-                # Używamy POZYCJI z AI, ale PĘDU z Geant4 (hybryda na start)
-                obs = np.array([
-                    current_ai_pos[0], current_ai_pos[1], current_ai_pos[2],
-                    px[i], py[i], pz[i], energy[i]
-                ], dtype=np.float32)
+                action, _ = model.predict(current_state, deterministic=True)
+                current_state += action
 
-                # Zapytaj model o akcję (deterministycznie = bez losowości)
-                action, _ = model.predict(obs, deterministic=True)
+                path_ai_x.append(current_state[0])
+                path_ai_y.append(current_state[1])
+                path_ai_z.append(current_state[2])
 
-                # Aktualizuj pozycję AI
-                # Action to [dx, dy, dz]
-                current_ai_pos += action
-
-                path_ai_x.append(current_ai_pos[0])
-                path_ai_y.append(current_ai_pos[1])
-                path_ai_z.append(current_ai_pos[2])
-
-            # C. Padding (Wyrównanie do MAX_STEPS)
-            # --- REAL ---
+            # C. Padding (Dopychanie zerami - tak samo jak w start_simulation)
             pad_rx = np.zeros(MAX_STEPS, dtype=np.float32)
             pad_ry = np.zeros(MAX_STEPS, dtype=np.float32)
             pad_rz = np.zeros(MAX_STEPS, dtype=np.float32)
@@ -111,28 +100,28 @@ class InferenceGenerator:
             pad_ry[:limit] = ry[:limit]
             pad_rz[:limit] = rz[:limit]
 
-            real_x.append(pad_rx)
-            real_y.append(pad_ry)
-            real_z.append(pad_rz)
-
-            # --- AI ---
             pad_ax = np.zeros(MAX_STEPS, dtype=np.float32)
             pad_ay = np.zeros(MAX_STEPS, dtype=np.float32)
             pad_az = np.zeros(MAX_STEPS, dtype=np.float32)
 
-            ai_steps = len(path_ai_x)
-            limit_ai = min(ai_steps, MAX_STEPS)
-            pad_ax[:limit_ai] = path_ai_x[:limit_ai]
-            pad_ay[:limit_ai] = path_ai_y[:limit_ai]
-            pad_az[:limit_ai] = path_ai_z[:limit_ai]
+            ai_limit = min(len(path_ai_x), MAX_STEPS)
+            pad_ax[:ai_limit] = path_ai_x[:ai_limit]
+            pad_ay[:ai_limit] = path_ai_y[:ai_limit]
+            pad_az[:ai_limit] = path_ai_z[:ai_limit]
 
-            ai_x.append(pad_ax)
-            ai_y.append(pad_ay)
+            real_x.append(pad_rx);
+            real_y.append(pad_ry);
+            real_z.append(pad_rz)
+            ai_x.append(pad_ax);
+            ai_y.append(pad_ay);
             ai_z.append(pad_az)
 
+            generated_count += 1
+
+        # Zwracamy słownik, żeby łatwo skleić w endpointcie
         return {
-            'real': {'x': np.array(real_x), 'y': np.array(real_y), 'z': np.array(real_z)},
-            'ai': {'x': np.array(ai_x), 'y': np.array(ai_y), 'z': np.array(ai_z)}
+            'real_x': np.array(real_x), 'real_y': np.array(real_y), 'real_z': np.array(real_z),
+            'ai_x': np.array(ai_x), 'ai_y': np.array(ai_y), 'ai_z': np.array(ai_z)
         }
 
 
@@ -148,35 +137,51 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             start_time = time.perf_counter()
 
-            # Generujemy mniej cząstek, bo teraz robimy 2x więcej pracy
+            # Zmniejsz batch dla bezpieczeństwa na start
             BATCH_SIZE = 20
+
             data = generator.generate_comparison_batch(BATCH_SIZE)
 
-            # Pakujemy DWA zestawy danych
-            # Format: [Real_Particles..., AI_Particles...]
-            # Sklejamy je w jedną długą tablicę, żeby wysłać jedną paczką
-            # Pierwsze 20 to Real, kolejne 20 to AI.
+            # === TUTAJ ROBIMY TO ANALOGICZNIE DO START_SIMULATION ===
 
-            combined_x = np.concatenate([data['real']['x'], data['ai']['x']])
-            combined_y = np.concatenate([data['real']['y'], data['ai']['y']])
-            combined_z = np.concatenate([data['real']['z'], data['ai']['z']])
+            # 1. Łączymy Real i AI w jeden ciąg
+            combined_x = np.concatenate([data['real_x'], data['ai_x']])
+            combined_y = np.concatenate([data['real_y'], data['ai_y']])
+            combined_z = np.concatenate([data['real_z'], data['ai_z']])
 
-            raw_points = np.stack([combined_x, combined_y, -combined_z], axis=2).flatten().astype(np.float32)
+            # 2. Tworzymy stos (Stack)
+            # Pamiętamy o minusie przy Z dla Unity!
+            raw_points = np.stack([
+                combined_x,
+                combined_y,
+                -combined_z
+            ], axis=2)
 
-            # Wysyłamy 2x więcej cząstek niż BATCH_SIZE
+            # 3. CRITICAL FIX: "Leczenie" danych z AI
+            # Zamieniamy NaN i Infinity na 0.0, żeby Unity się nie wywaliło
+            if not np.isfinite(raw_points).all():
+                print("⚠️ WARNING: Wykryto błędy (NaN/Inf) w danych AI! Naprawiam...")
+                raw_points = np.nan_to_num(raw_points, nan=0.0, posinf=0.0, neginf=0.0)
+
+            # 4. Spłaszczanie i rzutowanie
+            flat_data = raw_points.flatten().astype(np.float32)
+
+            # 5. Pakowanie
             packed = msgpack.packb({
-                'count': BATCH_SIZE * 2,
+                'count': BATCH_SIZE * 2,  # 20 Real + 20 AI
                 'steps': MAX_STEPS,
-                'data': raw_points.tobytes()
+                'data': flat_data.tobytes()
             })
 
             compressed = lz4.block.compress(packed, store_size=False)
             await websocket.send_bytes(compressed)
 
             process_time = time.perf_counter() - start_time
-            await asyncio.sleep(max(0, 0.05 - process_time))  # 20 FPS
+            await asyncio.sleep(max(0, 0.05 - process_time))
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"[Network] Error: {e}")
     finally:
         print("[Network] Disconnected")
