@@ -7,6 +7,5 @@ public:
   ~ActionInitialization() override;
 
   void BuildForMaster() const override;
-  
   void Build() const override;
 };

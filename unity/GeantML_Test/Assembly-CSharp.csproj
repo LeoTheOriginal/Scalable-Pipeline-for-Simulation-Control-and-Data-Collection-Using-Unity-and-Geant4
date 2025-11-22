@@ -56,22 +56,43 @@
   </PropertyGroup>
   <ItemGroup>
     <Analyzer Include="C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\Microsoft\Visual Studio Tools for Unity\Analyzers\Microsoft.Unity.Analyzers.dll" />
+    <Analyzer Include="C:\Thesis\unity\GeantML_Test\Assets\Packages\MessagePackAnalyzer.3.1.4\analyzers\roslyn4.3\cs\MessagePack.SourceGenerator.dll" />
+    <Analyzer Include="C:\Thesis\unity\GeantML_Test\Assets\Packages\MessagePackAnalyzer.3.1.4\analyzers\roslyn4.3\cs\MessagePack.Analyzers.CodeFixes.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f2\Editor\Data\Tools\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f2\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\Utils\TrajectoryBuffer.cs" />
     <Compile Include="Assets\Scripts\REST\RestClient.cs" />
-    <Compile Include="Assets\Scripts\Visualization\RealtimeMetrics.cs" />
+    <Compile Include="Assets\Scripts\Networking\ServerConnection.cs" />
     <Compile Include="Assets\Scripts\ML-Agents\TrainingCoordinator.cs" />
-    <Compile Include="Assets\Scripts\Utils\MetricsDisplay.cs" />
-    <Compile Include="Assets\Scripts\ML-Agents\TrajectoryRecorder.cs" />
-    <Compile Include="Assets\Scripts\Managers\MultiAgentManager.cs" />
-    <Compile Include="Assets\Scripts\Managers\EpisodeManager.cs" />
+    <Compile Include="Assets\Scripts\Performance\BatchRenderer.cs" />
     <Compile Include="Assets\Scripts\Utils\DirectionSampler.cs" />
-    <Compile Include="Assets\Scripts\ML-Agents\AgentSpawner.cs" />
-    <Compile Include="Assets\Scripts\Visualization\TrajectoryVisualizer.cs" />
+    <Compile Include="Assets\Scripts\Core\DataModels.cs" />
+    <Compile Include="Assets\Scripts\Visualization\ParticleVisualizer.cs" />
     <Compile Include="Assets\Scripts\ML-Agents\ParticleAgentREST.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Packages\Microsoft.NET.StringTools.17.11.4\lib\netstandard2.0\Microsoft.NET.StringTools.xml" />
+    <None Include="Assets\Packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll" />
+    <None Include="Assets\Packages\MessagePack.3.1.4\lib\netstandard2.1\MessagePack.xml" />
+    <None Include="Assets\Packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.xml" />
+    <None Include="Assets\Packages\System.Collections.Immutable.8.0.0\lib\netstandard2.0\System.Collections.Immutable.dll" />
+    <None Include="Assets\Packages\K4os.Compression.LZ4.1.3.8\lib\netstandard2.1\K4os.Compression.LZ4.dll" />
+    <None Include="Assets\Packages\MessagePack.Annotations.3.1.4\lib\netstandard2.0\MessagePack.Annotations.dll" />
+    <None Include="Assets\Packages\K4os.Compression.LZ4.1.3.8\lib\netstandard2.1\K4os.Compression.LZ4.xml" />
+    <None Include="Assets\Packages\System.Collections.Immutable.8.0.0\LICENSE.TXT" />
+    <None Include="Assets\Packages\Microsoft.NET.StringTools.17.11.4\notices\THIRDPARTYNOTICES.txt" />
+    <None Include="Assets\Packages\System.Runtime.CompilerServices.Unsafe.6.0.0\LICENSE.TXT" />
+    <None Include="Assets\Packages\Microsoft.NET.StringTools.17.11.4\lib\netstandard2.0\Microsoft.NET.StringTools.dll" />
+    <None Include="Assets\Packages\System.Runtime.CompilerServices.Unsafe.6.0.0\THIRD-PARTY-NOTICES.TXT" />
+    <None Include="Assets\Packages\MessagePack.Annotations.3.1.4\lib\netstandard2.0\MessagePack.Annotations.xml" />
+    <None Include="Assets\Packages\System.Collections.Immutable.8.0.0\lib\netstandard2.0\System.Collections.Immutable.xml" />
+    <None Include="Assets\Packages\MessagePackAnalyzer.3.1.4\analyzers\roslyn4.3\cs\MessagePack.SourceGenerator.dll" />
+    <None Include="Assets\Packages\System.Collections.Immutable.8.0.0\useSharedDesignerContext.txt" />
+    <None Include="Assets\Packages\System.Collections.Immutable.8.0.0\THIRD-PARTY-NOTICES.TXT" />
+    <None Include="Assets\Packages\MessagePack.3.1.4\lib\netstandard2.1\MessagePack.dll" />
+    <None Include="Assets\Packages\MessagePackAnalyzer.3.1.4\analyzers\roslyn4.3\cs\MessagePack.Analyzers.CodeFixes.dll" />
+    <None Include="Assets\Packages\System.Runtime.CompilerServices.Unsafe.6.0.0\useSharedDesignerContext.txt" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -410,12 +431,32 @@
       <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.1\Plugins\System.IO.Abstractions.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>Assets\Packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="ReportGeneratorMerged">
       <HintPath>Library\PackageCache\com.unity.testtools.codecoverage@1.2.6\lib\ReportGenerator\ReportGeneratorMerged.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>Assets\Packages\System.Collections.Immutable.8.0.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="K4os.Compression.LZ4">
+      <HintPath>Assets\Packages\K4os.Compression.LZ4.1.3.8\lib\netstandard2.1\K4os.Compression.LZ4.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MessagePack.Annotations">
+      <HintPath>Assets\Packages\MessagePack.Annotations.3.1.4\lib\netstandard2.0\MessagePack.Annotations.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="System.Interactive.Async">
       <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.1\Plugins\ProtoBuffer\System.Interactive.Async.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.NET.StringTools">
+      <HintPath>Assets\Packages\Microsoft.NET.StringTools.17.11.4\lib\netstandard2.0\Microsoft.NET.StringTools.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.VisualScripting.Antlr3.Runtime">
@@ -432,6 +473,10 @@
     </Reference>
     <Reference Include="System.IO.Abstractions.TestingHelpers">
       <HintPath>Library\PackageCache\com.unity.ml-agents@2.0.1\Plugins\System.IO.Abstractions.TestingHelpers.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MessagePack">
+      <HintPath>Assets\Packages\MessagePack.3.1.4\lib\netstandard2.1\MessagePack.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="netstandard">

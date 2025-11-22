@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 
 /// <summary>
 /// REST API Client for Unity-Python communication
-/// Simple, reliable alternative to gRPC
+/// BATCH MODE ONLY - sends completed trajectories in batches
 /// </summary>
 public class RestClient : MonoBehaviour
 {
@@ -15,16 +15,16 @@ public class RestClient : MonoBehaviour
     public string serverUrl = "http://localhost:5000";
 
     [Tooltip("Connection timeout in seconds")]
-    public float connectionTimeout = 5f;
+    public float connectionTimeout = 30f;
+
+    [Tooltip("Batch request timeout in seconds")]
+    public float batchTimeout = 300f;
 
     [Header("Status (Read-only)")]
     [SerializeField] private bool isConnected = false;
-    [SerializeField] private int activeAgents = 0;
-    [SerializeField] private float averageLatency = 0f;
-
-    // Statistics
-    private List<float> latencyHistory = new List<float>();
-    private const int MAX_LATENCY_HISTORY = 100;
+    [SerializeField] private string serverStatus = "Not connected";
+    [SerializeField] private int totalTrajectoriesProcessed = 0;
+    [SerializeField] private int totalBatchesProcessed = 0;
 
     void Start()
     {
@@ -49,187 +49,139 @@ public class RestClient : MonoBehaviour
                 string json = request.downloadHandler.text;
                 HealthResponse health = JsonUtility.FromJson<HealthResponse>(json);
 
-                Debug.Log($"[RestClient]   Connected successfully!");
-                Debug.Log($"[RestClient]   Status: {health.status}");
-                Debug.Log($"[RestClient]   Geant4: {health.geant4_version}");
-                Debug.Log($"[RestClient]   Active agents: {health.active_agents}");
+                Debug.Log($"[RestClient] ✅ Connected successfully!");
+                Debug.Log($"[RestClient]    Status: {health.status}");
+                Debug.Log($"[RestClient]    Server: {health.server}");
+                Debug.Log($"[RestClient]    Geant4: {health.geant4_version}");
+                Debug.Log($"[RestClient]    Workers: {health.config.num_workers}");
 
                 isConnected = true;
+                serverStatus = $"Connected - {health.server}";
+                totalTrajectoriesProcessed = health.statistics.total_trajectories_processed;
+                totalBatchesProcessed = health.statistics.total_batches_processed;
             }
             else
             {
-                Debug.LogError($"[RestClient]   Connection failed!");
-                Debug.LogError($"[RestClient]   Error: {request.error}");
-                Debug.LogError($"[RestClient]   Make sure Python server is running!");
+                Debug.LogError($"[RestClient] ❌ Connection failed!");
+                Debug.LogError($"[RestClient]    Error: {request.error}");
+                Debug.LogError($"[RestClient]    Make sure Python server is running!");
 
                 isConnected = false;
+                serverStatus = $"Failed: {request.error}";
             }
         }
     }
 
     /// <summary>
-    /// Initialize agent with initial particle conditions
+    /// Send batch of trajectories to Python server for Geant4 processing
     /// </summary>
-    public IEnumerator InitializeAgent(
-        int agentId,
-        string particleType,
-        float initialEnergy,
-        Vector3 initialPosition,
-        Vector3 initialDirection,
-        Action<bool> callback = null)
+    public IEnumerator SendTrajectoryBatch(
+        List<TrajectoryData> trajectories,
+        Action<BatchResponse> callback)
     {
-        InitializeRequest initData = new InitializeRequest
+        if (!isConnected)
         {
-            agent_id = agentId,
-            particle_type = particleType,
-            initial_energy = initialEnergy,
-            initial_position = new float[] { initialPosition.x, initialPosition.y, initialPosition.z },
-            initial_direction = new float[] { initialDirection.x, initialDirection.y, initialDirection.z }
-        };
-
-        string json = JsonUtility.ToJson(initData);
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
-
-        using (UnityWebRequest request = new UnityWebRequest($"{serverUrl}/initialize", "POST"))
-        {
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-            request.timeout = (int)connectionTimeout;
-
-            yield return request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                Debug.Log($"[RestClient] Agent {agentId} initialized successfully");
-                activeAgents++;
-                callback?.Invoke(true);
-            }
-            else
-            {
-                Debug.LogError($"[RestClient] Initialize failed for agent {agentId}: {request.error}");
-                callback?.Invoke(false);
-            }
+            Debug.LogError("[RestClient] Not connected to server!");
+            callback?.Invoke(null);
+            yield break;
         }
-    }
 
-    /// <summary>
-    /// Send step to server and receive reward
-    /// </summary>
-    public IEnumerator SendStep(
-        int agentId,
-        Vector3 unityPosition,
-        Vector3 unityDirection,
-        float unityEnergy,
-        float energyDeposited,
-        Action<StepResponse> callback)
-    {
+        if (trajectories == null || trajectories.Count == 0)
+        {
+            Debug.LogWarning("[RestClient] Empty trajectory batch!");
+            callback?.Invoke(null);
+            yield break;
+        }
+
+        Debug.Log($"[RestClient] Sending batch: {trajectories.Count} trajectories");
+
         float startTime = Time.realtimeSinceStartup;
 
-        StepRequest stepData = new StepRequest
+        // Prepare batch request
+        BatchRequest batchRequest = new BatchRequest
         {
-            agent_id = agentId,
-            unity_position = new float[] { unityPosition.x, unityPosition.y, unityPosition.z },
-            unity_direction = new float[] { unityDirection.x, unityDirection.y, unityDirection.z },
-            unity_energy = unityEnergy,
-            energy_deposited = energyDeposited
+            trajectories = trajectories.ToArray()
         };
 
-        string json = JsonUtility.ToJson(stepData);
+        string json = JsonUtility.ToJson(batchRequest);
         byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
 
-        using (UnityWebRequest request = new UnityWebRequest($"{serverUrl}/step", "POST"))
+        Debug.Log($"[RestClient] Request size: {bodyRaw.Length / 1024f:F1} KB");
+
+        using (UnityWebRequest request = new UnityWebRequest($"{serverUrl}/trajectory/process_batch", "POST"))
         {
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
-            request.timeout = (int)connectionTimeout;
+            request.timeout = (int)batchTimeout;
 
             yield return request.SendWebRequest();
 
-            float latency = (Time.realtimeSinceStartup - startTime) * 1000f;
-            UpdateLatency(latency);
+            float requestTime = Time.realtimeSinceStartup - startTime;
 
             if (request.result == UnityWebRequest.Result.Success)
             {
                 string responseJson = request.downloadHandler.text;
-                StepResponse response = JsonUtility.FromJson<StepResponse>(responseJson);
+                BatchResponse response = JsonUtility.FromJson<BatchResponse>(responseJson);
+
+                Debug.Log($"[RestClient] ✅ Batch processed successfully!");
+                Debug.Log($"[RestClient]    Trajectories: {response.trajectories_processed}");
+                Debug.Log($"[RestClient]    Server time: {response.processing_time_seconds:F2}s");
+                Debug.Log($"[RestClient]    Total time: {requestTime:F2}s");
+                Debug.Log($"[RestClient]    Results: {response.results.Length}");
+
+                // Update statistics
+                totalTrajectoriesProcessed += response.trajectories_processed;
+                totalBatchesProcessed++;
 
                 callback?.Invoke(response);
-
-                if (response.episode_done)
-                {
-                    activeAgents = Mathf.Max(0, activeAgents - 1);
-                }
             }
             else
             {
-                Debug.LogError($"[RestClient] Step failed for agent {agentId}: {request.error}");
+                Debug.LogError($"[RestClient] ❌ Batch processing failed!");
+                Debug.LogError($"[RestClient]    Error: {request.error}");
+                Debug.LogError($"[RestClient]    Response code: {request.responseCode}");
 
-                // Return error response
-                StepResponse errorResponse = new StepResponse
+                if (request.downloadHandler != null && !string.IsNullOrEmpty(request.downloadHandler.text))
                 {
-                    success = false,
-                    agent_id = agentId,
-                    reward = -10f,
-                    episode_done = true,
-                    termination_reason = $"error: {request.error}"
-                };
+                    Debug.LogError($"[RestClient]    Server response: {request.downloadHandler.text}");
+                }
 
-                callback?.Invoke(errorResponse);
+                callback?.Invoke(null);
             }
         }
     }
 
     /// <summary>
-    /// Reset agent on server
+    /// Get server configuration
     /// </summary>
-    public IEnumerator ResetAgent(int agentId, Action<bool> callback = null)
+    public IEnumerator GetServerConfig(Action<ServerConfig> callback)
     {
-        ResetRequest resetData = new ResetRequest { agent_id = agentId };
-        string json = JsonUtility.ToJson(resetData);
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
-
-        using (UnityWebRequest request = new UnityWebRequest($"{serverUrl}/reset", "POST"))
+        using (UnityWebRequest request = UnityWebRequest.Get($"{serverUrl}/config"))
         {
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
+            request.timeout = (int)connectionTimeout;
 
             yield return request.SendWebRequest();
 
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log($"[RestClient] Agent {agentId} reset");
-                callback?.Invoke(true);
+                string json = request.downloadHandler.text;
+                ServerConfig config = JsonUtility.FromJson<ServerConfig>(json);
+
+                Debug.Log($"[RestClient] Server config retrieved");
+                callback?.Invoke(config);
             }
             else
             {
-                Debug.LogError($"[RestClient] Reset failed: {request.error}");
-                callback?.Invoke(false);
+                Debug.LogError($"[RestClient] Failed to get config: {request.error}");
+                callback?.Invoke(null);
             }
         }
     }
 
-    private void UpdateLatency(float latency)
-    {
-        latencyHistory.Add(latency);
-        if (latencyHistory.Count > MAX_LATENCY_HISTORY)
-        {
-            latencyHistory.RemoveAt(0);
-        }
-
-        float sum = 0f;
-        foreach (float l in latencyHistory)
-        {
-            sum += l;
-        }
-        averageLatency = sum / latencyHistory.Count;
-    }
-
     public bool IsConnected() => isConnected;
-    public float GetAverageLatency() => averageLatency;
-    public int GetActiveAgents() => activeAgents;
+    public int GetTotalTrajectoriesProcessed() => totalTrajectoriesProcessed;
+    public int GetTotalBatchesProcessed() => totalBatchesProcessed;
 }
 
 // ============================================================================
@@ -240,64 +192,92 @@ public class RestClient : MonoBehaviour
 public class HealthResponse
 {
     public string status;
-    public int active_agents;
+    public string server;
     public string geant4_version;
+    public float server_time;
+    public ServerConfigInfo config;
+    public ServerStatistics statistics;
 }
 
 [System.Serializable]
-public class InitializeRequest
+public class ServerConfigInfo
 {
-    public int agent_id;
-    public string particle_type;
-    public float initial_energy;
-    public float[] initial_position;
-    public float[] initial_direction;
+    public int buffer_size;
+    public int num_workers;
+    public string geant4_executable;
 }
 
 [System.Serializable]
-public class StepRequest
+public class ServerStatistics
 {
-    public int agent_id;
-    public float[] unity_position;
-    public float[] unity_direction;
-    public float unity_energy;
-    public float energy_deposited;
+    public int total_trajectories_processed;
+    public int total_batches_processed;
 }
 
 [System.Serializable]
-public class StepResponse
+public class BatchRequest
+{
+    public TrajectoryData[] trajectories;
+}
+
+[System.Serializable]
+public class BatchResponse
 {
     public bool success;
+    public int trajectories_processed;
+    public float processing_time_seconds;
+    public TrajectoryResult[] results;
+}
+
+[System.Serializable]
+public class TrajectoryResult
+{
+    public int trajectory_id;
     public int agent_id;
-    public float reward;
-    public Geant4State geant4_state;
-    public StepMetrics metrics;
-    public bool episode_done;
-    public string termination_reason;
-    public float processing_time_ms;
+    public EpisodeSummary episode_summary;
 }
 
 [System.Serializable]
-public class Geant4State
+public class EpisodeSummary
 {
-    public float[] position;
-    public float[] direction;
-    public float energy;
-    public float energy_deposited;
-    public float step_length;
-    public string process_name;
+    public float total_reward;
+    public float mean_position_error;
+    public float mean_momentum_error;
+    public int num_steps;
+    public bool success;
 }
 
 [System.Serializable]
-public class StepMetrics
+public class ServerConfig
 {
-    public float position_error;
-    public float energy_error;
-    public float direction_error;
+    public InitialConditionsConfig initial_conditions;
+    public TrainingConfig training;
+    public RewardConfig reward;
 }
 
 [System.Serializable]
-public class ResetRequest
+public class InitialConditionsConfig
 {
-    public int agent_id;
+    public string particle_type;
+    public float particle_energy;
+    public float[] particle_position;
+    public float[] particle_direction;
+}
+
+[System.Serializable]
+public class TrainingConfig
+{
+    public int buffer_size;
+    public int num_workers;
+    public float[] phantom_size;
+    public float[] phantom_center;
+}
+
+[System.Serializable]
+public class RewardConfig
+{
+    public float position_weight;
+    public float momentum_weight;
+    public float completion_bonus;
+    public float exit_penalty;
 }

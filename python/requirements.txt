@@ -1,2 +1,6 @@
-pyyaml~=6.0.3
-numpy~=1.23.5
+fastapi
+uvicorn[standard]
+numpy
+msgpack
+lz4
+websockets

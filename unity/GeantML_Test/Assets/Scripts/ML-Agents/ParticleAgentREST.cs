@@ -6,15 +6,12 @@ using Unity.MLAgents.Sensors;
 using UnityEngine;
 
 /// <summary>
-/// ML-Agents Particle Agent with REST API integration
-/// NOW WITH TRAJECTORY RECORDING for batch processing
+/// ML-Agents Particle Agent - BATCH MODE ONLY
+/// Fixed initial conditions, 6 observations (position + momentum)
 /// </summary>
 [RequireComponent(typeof(TrailRenderer))]
 public class ParticleAgentREST : Agent
 {
-    [SerializeField] private bool serverInitialized = false;
-    [SerializeField] private bool serverInitializing = false;
-
     [Header("Agent Configuration")]
     [Tooltip("Unique agent ID")]
     public int agentId = 0;
@@ -22,13 +19,13 @@ public class ParticleAgentREST : Agent
     [Tooltip("Maximum steps per episode")]
     public int maxEpisodeSteps = 1000;
 
-    [Header("Particle Physics")]
-    [Tooltip("Initial particle energy range (MeV)")]
-    public Vector2 energyRange = new Vector2(1f, 20f);
+    [Header("Particle Physics - FIXED")]
+    [Tooltip("Initial particle energy (MeV) - FIXED")]
+    public float initialEnergy = 10.0f;
 
-    [SerializeField] private float initialEnergy;
     [SerializeField] private float currentEnergy;
     [SerializeField] private Vector3 particleDirection;
+    [SerializeField] private Vector3 particleMomentum;
 
     [Tooltip("Energy loss per cm traveled")]
     public float energyLossPerCm = 0.05f;
@@ -37,66 +34,34 @@ public class ParticleAgentREST : Agent
     [Tooltip("Movement speed (cm per step)")]
     public float moveSpeed = 0.1f;
 
-    [Header("Environment")]
-    [Tooltip("Water phantom size (cm)")]
-    public Vector3 phantomSize = new Vector3(5f, 5f, 5f);
+    [Header("Environment - FIXED 10cm")]
+    [Tooltip("Water phantom size (cm) - MUST BE 10x10x10")]
+    public Vector3 phantomSize = new Vector3(10f, 10f, 10f);
 
     [Tooltip("Water phantom center")]
     public Vector3 phantomCenter = Vector3.zero;
-
-    [Header("References")]
-    [Tooltip("REST client for server communication")]
-    public RestClient restClient;
-
-    [Header("Training Mode")]
-    [Tooltip("Per-step mode (real-time) or Episode mode (batch)")]
-    public bool usePerStepMode = false;
 
     [Header("Visualization")]
     public Color trailColor = Color.cyan;
     public bool showDebugInfo = true;
 
     // Private variables
-    private Vector3 startPosition = new Vector3(-6f, 0f, 0f);
+    private Vector3 startPosition = new Vector3(-6f, 0f, 0f);  // FIXED
+    private Vector3 initialDirection = new Vector3(1f, 0f, 0f);  // FIXED
     private int episodeStepCount = 0;
     private float totalEpisodeReward = 0f;
-    private bool waitingForServerResponse = false;
     private TrailRenderer trail;
 
-    // Trajectory recording (for batch mode)
+    // Trajectory recording
     private List<StepData> recordedSteps = new List<StepData>();
     private InitialConditions episodeInitialConditions;
 
     // Events
     public event Action<TrajectoryData> OnTrajectoryCompleted;
 
-    // Geant4 ground truth (for visualization)
-    private Vector3 geant4Position;
-    private float geant4Energy;
-
     public override void Initialize()
     {
         base.Initialize();
-
-        // Find REST client if not assigned
-        if (restClient == null)
-        {
-            // najpierw spróbuj z tego samego obiektu
-            restClient = GetComponent<RestClient>();
-
-            // jak nie ma – szukaj w scenie
-            if (restClient == null)
-            {
-                restClient = FindObjectOfType<RestClient>();
-            }
-
-            if (restClient == null)
-            {
-                Debug.LogError($"[ParticleAgent {agentId}] ❌ RestClient not found in scene!");
-                return;
-            }
-        }
-
 
         // Setup trail renderer
         trail = GetComponent<TrailRenderer>();
@@ -110,107 +75,66 @@ public class ParticleAgentREST : Agent
             trail.endColor = trailColor * 0.5f;
         }
 
-        Debug.Log($"[ParticleAgent {agentId}] ✅ Initialized (Mode: {(usePerStepMode ? "Per-Step" : "Episode Batch")})");
+        Debug.Log($"[ParticleAgent {agentId}] ✅ Initialized (BATCH MODE)");
+        Debug.Log($"[ParticleAgent {agentId}]    Phantom: {phantomSize} cm");
+        Debug.Log($"[ParticleAgent {agentId}]    Fixed Energy: {initialEnergy} MeV");
     }
 
     public override void OnEpisodeBegin()
     {
-        // Reset lokalny
-        transform.position = startPosition;
-
-        initialEnergy = UnityEngine.Random.Range(energyRange.x, energyRange.y);
-        currentEnergy = initialEnergy;
-        particleDirection = UnityEngine.Random.onUnitSphere;
+        // ====================================================================
+        // FIXED INITIAL CONDITIONS (synchronized with Geant4)
+        // ====================================================================
+        transform.position = startPosition;  // (-6, 0, 0)
+        currentEnergy = initialEnergy;  // 10.0 MeV
+        particleDirection = initialDirection;  // (1, 0, 0)
+        particleMomentum = particleDirection * currentEnergy;
 
         episodeStepCount = 0;
         totalEpisodeReward = 0f;
-        waitingForServerResponse = false;
 
         recordedSteps.Clear();
 
+        // Store initial conditions
         episodeInitialConditions = new InitialConditions
         {
             particleType = "e-",
             initialEnergy = initialEnergy,
             initialPosition = new float[] { startPosition.x, startPosition.y, startPosition.z },
-            initialDirection = new float[] { particleDirection.x, particleDirection.y, particleDirection.z }
+            initialDirection = new float[] { initialDirection.x, initialDirection.y, initialDirection.z }
         };
 
         if (trail != null)
             trail.Clear();
 
-        // 🔑 flagi serwera
-        serverInitialized = false;
-        serverInitializing = false;
-
-        if (usePerStepMode)
-        {
-            serverInitializing = true;
-            StartCoroutine(restClient.InitializeAgent(
-                agentId,
-                "e-",
-                initialEnergy,
-                startPosition,
-                particleDirection,
-                success =>
-                {
-                    serverInitializing = false;
-                    serverInitialized = success;
-
-                    if (!success)
-                    {
-                        Debug.LogError($"[ParticleAgent {agentId}] Failed to initialize on server!");
-                    }
-                }
-            ));
-        }
-
         if (showDebugInfo)
         {
-            Debug.Log($"[ParticleAgent {agentId}] 🔄 Episode start: " +
-                      $"Energy={initialEnergy:F2} MeV, Dir={particleDirection}");
+            Debug.Log($"[ParticleAgent {agentId}] 🔄 Episode start");
         }
     }
 
-
     public override void CollectObservations(VectorSensor sensor)
     {
+        // ====================================================================
+        // SIMPLIFIED OBSERVATIONS: 6 values (position + momentum)
+        // ====================================================================
+
         // Position relative to start (3 values)
         Vector3 relativePos = transform.position - startPosition;
         sensor.AddObservation(relativePos.x);
         sensor.AddObservation(relativePos.y);
         sensor.AddObservation(relativePos.z);
 
-        // Velocity = direction * energy_fraction (3 values)
-        float energyFraction = currentEnergy / Mathf.Max(initialEnergy, 0.01f);
-        Vector3 velocity = particleDirection * energyFraction;
-        sensor.AddObservation(velocity.x);
-        sensor.AddObservation(velocity.y);
-        sensor.AddObservation(velocity.z);
+        // Momentum (3 values)
+        sensor.AddObservation(particleMomentum.x);
+        sensor.AddObservation(particleMomentum.y);
+        sensor.AddObservation(particleMomentum.z);
 
-        // Current energy normalized (1 value)
-        sensor.AddObservation(energyFraction);
-
-        // Direction (3 values)
-        sensor.AddObservation(particleDirection.x);
-        sensor.AddObservation(particleDirection.y);
-        sensor.AddObservation(particleDirection.z);
-
-        // Total: 10 observations
+        // Total: 6 observations
     }
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        // Don't act if waiting for server response (per-step mode only)
-        if (usePerStepMode)
-        {
-            if (serverInitializing || !serverInitialized)
-                return;
-
-            if (waitingForServerResponse)
-                return;
-        }
-
         // Get continuous actions [moveX, moveY, moveZ]
         float moveX = actions.ContinuousActions[0];
         float moveY = actions.ContinuousActions[1];
@@ -236,108 +160,33 @@ public class ParticleAgentREST : Agent
         currentEnergy -= energyLoss;
         currentEnergy = Mathf.Max(currentEnergy, 0f);
 
-        // Record step (for batch mode)
-        RecordStep(previousPosition, transform.position, energyLoss);
+        // Update momentum
+        particleMomentum = particleDirection * currentEnergy;
+
+        // Record step
+        RecordStep(previousPosition, transform.position);
 
         // Increment step counter
         episodeStepCount++;
 
-        // === MODE SELECTION ===
-        if (usePerStepMode)
-        {
-            // PER-STEP MODE: cała logika reward/termination jest po stronie serwera
-            SendStepToServer(energyLoss);
-        }
-        else
-        {
-            // EPISODE BATCH MODE: lokalny living penalty + lokalne termination
-            AddReward(-0.001f);  // Small living penalty
-            CheckLocalTermination();
-        }
+        // Small living penalty
+        AddReward(-0.001f);
+
+        // Check termination
+        CheckLocalTermination();
     }
 
-
-    private void RecordStep(Vector3 prevPos, Vector3 newPos, float energyLoss)
+    private void RecordStep(Vector3 prevPos, Vector3 newPos)
     {
         StepData step = new StepData
         {
             stepNumber = episodeStepCount,
             position = new float[] { newPos.x, newPos.y, newPos.z },
-            direction = new float[] { particleDirection.x, particleDirection.y, particleDirection.z },
-            energy = currentEnergy,
-            energyDeposited = energyLoss
+            momentum = new float[] { particleMomentum.x, particleMomentum.y, particleMomentum.z },
+            energy = currentEnergy
         };
 
         recordedSteps.Add(step);
-    }
-
-    private void SendStepToServer(float energyLoss)
-    {
-        waitingForServerResponse = true;
-        StartCoroutine(restClient.SendStep(
-            agentId,
-            transform.position,
-            particleDirection,
-            currentEnergy,
-            energyLoss,
-            OnServerResponse
-        ));
-
-        //AddReward(-0.001f);  // Small living penalty
-        CheckLocalTermination();
-    }
-
-    private void OnServerResponse(StepResponse response)
-    {
-        waitingForServerResponse = false;
-
-        if (!response.success)
-        {
-            Debug.LogError($"[ParticleAgent {agentId}] Server error, ending episode");
-            EndEpisode();
-            return;
-        }
-
-        // Apply step reward
-        AddReward(response.reward);
-        totalEpisodeReward += response.reward;
-
-        // Store Geant4 ground truth for visualization
-        if (response.geant4_state != null && response.geant4_state.position != null)
-        {
-            geant4Position = new Vector3(
-                response.geant4_state.position[0],
-                response.geant4_state.position[1],
-                response.geant4_state.position[2]
-            );
-            geant4Energy = response.geant4_state.energy;
-        }
-
-        // Debug logging
-        if (showDebugInfo && episodeStepCount % 20 == 0)
-        {
-            Debug.Log($"[ParticleAgent {agentId}] Step {episodeStepCount}: " +
-                     $"Reward={response.reward:F4}, " +
-                     $"PosErr={response.metrics.position_error:F3}cm, " +
-                     $"Latency={response.processing_time_ms:F1}ms");
-        }
-
-        // Check if Geant4 says episode is done
-        if (response.episode_done)
-        {
-            if (showDebugInfo)
-            {
-                Debug.Log($"[ParticleAgent {agentId}] Episode done by Geant4: " +
-                         $"{response.termination_reason}, TotalReward={totalEpisodeReward:F2}");
-            }
-
-            if (response.termination_reason == "particle_stopped")
-            {
-                AddReward(5.0f);
-            }
-
-            EndEpisode();
-        }
     }
 
     private void CheckLocalTermination()
@@ -347,37 +196,43 @@ public class ParticleAgentREST : Agent
         {
             if (showDebugInfo)
             {
-                Debug.Log($"[ParticleAgent {agentId}] Termination: energy depleted");
+                Debug.Log($"[ParticleAgent {agentId}] Termination: energy depleted ({episodeStepCount} steps)");
             }
             AddReward(1.0f);
-
-            // In batch mode, submit trajectory
-            if (!usePerStepMode)
-            {
-                SubmitTrajectoryToBatch();
-            }
-
+            SubmitTrajectoryToBatch();
             EndEpisode();
             return;
         }
 
-        // Exited phantom
+        // POPRAWKA: Definiujemy granice "Labu", a nie Fantomu.
+        // Skoro start jest na -6, a fantom kończy się na +5, dajmy mu np. od -7 do +6 na X.
+        // Na Y i Z też dajmy lekki margines, żeby nie ginął od razu jak muśnie krawędź.
+
         Vector3 relativePos = transform.position - phantomCenter;
-        if (Mathf.Abs(relativePos.x) > phantomSize.x / 2f ||
-            Mathf.Abs(relativePos.y) > phantomSize.y / 2f ||
-            Mathf.Abs(relativePos.z) > phantomSize.z / 2f)
+
+        // Ustalmy bezpieczne granice świata (World Bounds)
+        // X: Startuje z -6, leci do +5. Dajmy mu zakres +/- 7.0f
+        // Y/Z: Fantom ma +/- 5.0f. Dajmy mu +/- 6.0f (żeby mógł lekko chybić i dostać karę później lub lecieć po krawędzi)
+
+        float xLimit = 7.0f;
+        float yzLimit = 6.0f; // Trochę szerzej niż fantom (który ma 5.0f pół-wymiaru)
+
+        bool isOutsideWorld =
+            Mathf.Abs(relativePos.x) > xLimit ||
+            Mathf.Abs(relativePos.y) > yzLimit ||
+            Mathf.Abs(relativePos.z) > yzLimit;
+
+        if (isOutsideWorld)
         {
             if (showDebugInfo)
             {
-                Debug.Log($"[ParticleAgent {agentId}] Termination: exited phantom");
+                // Tutaj logujemy, że wyleciał poza obszar roboczy
+                Debug.Log($"[ParticleAgent {agentId}] Termination: exited world bounds (Pos: {relativePos})");
             }
+
+            // Kara za wylecenie w kosmos
             AddReward(-5.0f);
-
-            if (!usePerStepMode)
-            {
-                SubmitTrajectoryToBatch();
-            }
-
+            SubmitTrajectoryToBatch();
             EndEpisode();
             return;
         }
@@ -389,12 +244,7 @@ public class ParticleAgentREST : Agent
             {
                 Debug.Log($"[ParticleAgent {agentId}] Termination: max steps");
             }
-
-            if (!usePerStepMode)
-            {
-                SubmitTrajectoryToBatch();
-            }
-
+            SubmitTrajectoryToBatch();
             EndEpisode();
         }
     }
@@ -404,6 +254,7 @@ public class ParticleAgentREST : Agent
         TrajectoryData trajectory = new TrajectoryData
         {
             agentId = agentId,
+            trajectoryId = -1,  // Will be assigned by coordinator
             initialConditions = episodeInitialConditions,
             steps = recordedSteps
         };
@@ -439,12 +290,36 @@ public class ParticleAgentREST : Agent
 
         Gizmos.color = Color.yellow;
         Gizmos.DrawRay(transform.position, particleDirection * 0.5f);
-
-        if (geant4Position != Vector3.zero)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(geant4Position, 0.1f);
-            Gizmos.DrawLine(transform.position, geant4Position);
-        }
     }
+}
+
+// ============================================================================
+// Data structures
+// ============================================================================
+
+[System.Serializable]
+public class TrajectoryData
+{
+    public int agentId;
+    public int trajectoryId;
+    public InitialConditions initialConditions;
+    public List<StepData> steps;
+}
+
+[System.Serializable]
+public class InitialConditions
+{
+    public string particleType;
+    public float initialEnergy;
+    public float[] initialPosition;
+    public float[] initialDirection;
+}
+
+[System.Serializable]
+public class StepData
+{
+    public int stepNumber;
+    public float[] position;
+    public float[] momentum;
+    public float energy;
 }
