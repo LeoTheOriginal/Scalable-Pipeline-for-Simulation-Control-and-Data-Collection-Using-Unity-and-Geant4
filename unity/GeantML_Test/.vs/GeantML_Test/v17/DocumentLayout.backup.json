@@ -3,6 +3,22 @@
   "WorkspaceRootPath": "C:\\Thesis\\unity\\GeantML_Test\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Networking\\ServerConnection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Networking\\ServerConnection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\ParticleVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Visualization\\ParticleVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Performance\\BatchRenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Performance\\BatchRenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\DataModels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Core\\DataModels.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\ML-Agents\\ParticleAgentREST.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\ML-Agents\\ParticleAgentREST.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -26,7 +42,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
@@ -46,7 +62,59 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ParticleVisualizer.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\ParticleVisualizer.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Visualization\\ParticleVisualizer.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\ParticleVisualizer.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Visualization\\ParticleVisualizer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAEMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-20T18:21:55.281Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "BatchRenderer.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Performance\\BatchRenderer.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Performance\\BatchRenderer.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Performance\\BatchRenderer.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Performance\\BatchRenderer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-20T18:20:01.774Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ServerConnection.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Networking\\ServerConnection.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Networking\\ServerConnection.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Networking\\ServerConnection.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Networking\\ServerConnection.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-20T18:18:50.031Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 3,
+              "Title": "DataModels.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\DataModels.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Core\\DataModels.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\DataModels.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Core\\DataModels.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-20T18:17:39.39Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
               "Title": "DirectionSampler.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Utils\\DirectionSampler.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Utils\\DirectionSampler.cs",
@@ -54,12 +122,11 @@
               "RelativeToolTip": "Assets\\Scripts\\Utils\\DirectionSampler.cs",
               "ViewState": "AgIAAC0AAAAAAAAAAAAgwGsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-19T21:33:17.028Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-19T21:33:17.028Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 4,
               "Title": "ParticleAgentREST.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\ML-Agents\\ParticleAgentREST.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\ML-Agents\\ParticleAgentREST.cs",
@@ -72,7 +139,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 5,
               "Title": "TrainingCoordinator.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\ML-Agents\\TrainingCoordinator.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\ML-Agents\\TrainingCoordinator.cs",
@@ -80,12 +147,11 @@
               "RelativeToolTip": "Assets\\Scripts\\ML-Agents\\TrainingCoordinator.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-19T21:31:29.965Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-19T21:31:29.965Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "RestClient.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\REST\\RestClient.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\REST\\RestClient.cs",
@@ -93,8 +159,7 @@
               "RelativeToolTip": "Assets\\Scripts\\REST\\RestClient.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-19T21:30:18.433Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-19T21:30:18.433Z"
             }
           ]
         }

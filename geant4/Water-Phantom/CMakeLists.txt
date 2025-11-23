@@ -16,20 +16,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Find Dependencies
 # ============================================================================
 
-# 1. Find Geant4
+# 1. Find Geant4 (Tylko to jest potrzebne, Python i pybind11 idą do kosza)
 find_package(Geant4 REQUIRED ui_all vis_all)
 include(${Geant4_USE_FILE})
-
-# 2. Find Python
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
-
-# 3. Find Pybind11
-execute_process(
-    COMMAND "${Python_EXECUTABLE}" -m pybind11 --cmakedir
-    OUTPUT_VARIABLE pybind11_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-find_package(pybind11 CONFIG REQUIRED)
 
 # ============================================================================
 # Source Management
@@ -56,59 +45,63 @@ set(COMMON_HEADERS
 )
 
 # ============================================================================
-# Target 1: Standalone Executable
+# Target: Unity Native Plugin (Shared Library / DLL)
 # ============================================================================
-add_executable(WaterPhantomApp
-    main.cc
+
+# Tworzymy bibliotekę współdzieloną, a nie moduł Pythona
+add_library(geant4_plugin SHARED
+    src/Geant4Plugin.cc  # <-- TO BĘDZIE NOWY PLIK (Most C++/C#)
     ${COMMON_SOURCES}
     ${COMMON_HEADERS}
 )
 
-target_include_directories(WaterPhantomApp PRIVATE ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(WaterPhantomApp ${Geant4_LIBRARIES})
+target_include_directories(geant4_plugin PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(geant4_plugin PRIVATE ${Geant4_LIBRARIES})
 
 # ============================================================================
-# Target 2: Python Module
+# Output Configuration (Deployment to Unity)
 # ============================================================================
-pybind11_add_module(geant4_sim
-    PyGeant4.cc
-    ${COMMON_SOURCES}
-    ${COMMON_HEADERS}
-)
 
-target_include_directories(geant4_sim PRIVATE ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(geant4_sim PRIVATE ${Geant4_LIBRARIES})
+# Ścieżka do folderu Plugins w Unity (Dostosuj jeśli nazwa folderu Unity jest inna)
+# Wychodzimy z geant4/Water-Phantom (..) -> geant4 (..) -> Thesis -> unity/GeantML_Test/Assets/Plugins
+get_filename_component(UNITY_PLUGIN_DIR "${CMAKE_SOURCE_DIR}/../../unity/GeantML_Test/Assets/Plugins" ABSOLUTE)
 
-# --- AUTOMATYCZNE UMIESZCZANIE W STRUKTURZE PYTHONA ---
+# Jeśli folder nie istnieje, stwórz go (żeby CMake nie krzyczał)
+file(MAKE_DIRECTORY ${UNITY_PLUGIN_DIR})
 
-# Obliczamy ścieżkę bezwzględną do python/src/simulation
-# Relatywnie: ../../python/src/simulation
-get_filename_component(PYTHON_SIM_DIR "${CMAKE_SOURCE_DIR}/../../python/src/simulation" ABSOLUTE)
+message(STATUS "Unity Plugin Directory: ${UNITY_PLUGIN_DIR}")
 
-message(STATUS "Target Python Directory: ${PYTHON_SIM_DIR}")
+# ... (cała góra pliku bez zmian) ...
 
-set_target_properties(geant4_sim PROPERTIES
-    # Wymuszamy zapis pliku .pyd bezpośrednio do folderu źródłowego Pythona
-    LIBRARY_OUTPUT_DIRECTORY "${PYTHON_SIM_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY "${PYTHON_SIM_DIR}"
-
-    # To samo dla konfiguracji Release (Visual Studio tworzy podfoldery Release/Debug)
-    LIBRARY_OUTPUT_DIRECTORY_RELEASE "${PYTHON_SIM_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PYTHON_SIM_DIR}"
-
+set_target_properties(geant4_plugin PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${UNITY_PLUGIN_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${UNITY_PLUGIN_DIR}"
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE "${UNITY_PLUGIN_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${UNITY_PLUGIN_DIR}"
     PREFIX ""
-    OUTPUT_NAME "geant4_sim"
-    SUFFIX ".pyd"
+    OUTPUT_NAME "geant4_plugin"
 )
-# ------------------------------------------------------
 
-# ============================================================================
-# Macros Copy
-# ============================================================================
-file(GLOB macro_files ${PROJECT_SOURCE_DIR}/macros/*.mac)
-foreach(_file ${macro_files})
-    configure_file(${_file} ${CMAKE_BINARY_DIR}/COPYONLY)
-endforeach()
+# === POPRAWIONA SEKCJA KOPIOWANIA ===
+# Zamiast bawić się w relatywne ścieżki, wpiszmy to na sztywno, bo wiemy gdzie to jest.
+set(GEANT4_BIN_DIR "C:/Geant4/install/bin")
 
-message(STATUS "Python Found: ${Python_EXECUTABLE}")
-message(STATUS "Pybind11 Found: ${pybind11_DIR}")
+# Komenda kopiująca G4global.dll (i inne krytyczne, jeśli chcesz dodać)
+add_custom_command(TARGET geant4_plugin POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${GEANT4_BIN_DIR}/G4global.dll"
+    "${UNITY_PLUGIN_DIR}/"
+
+    # Geant4 potrzebuje też tych bibliotek (dodaję najwazniejsze):
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4run.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4event.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4tracking.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4processes.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4particles.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4geometry.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4materials.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4intercoms.dll" "${UNITY_PLUGIN_DIR}/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${GEANT4_BIN_DIR}/G4track.dll" "${UNITY_PLUGIN_DIR}/"
+
+    COMMENT "Kopiowanie bibliotek DLL Geant4 do Unity..."
+)
