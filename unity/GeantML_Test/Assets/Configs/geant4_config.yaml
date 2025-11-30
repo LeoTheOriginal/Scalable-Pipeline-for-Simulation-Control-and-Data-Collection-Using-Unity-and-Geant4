@@ -1,24 +1,73 @@
 behaviors:
-  Geant4Agent:
+  ElectronAgent:
     trainer_type: ppo
+
+    # ====================================================================
+    # HYPERPARAMETERS - FIXED for realistic physics
+    # ====================================================================
     hyperparameters:
-      batch_size: 2048
-      buffer_size: 20480
-      learning_rate: 0.0003
-      beta: 0.005
-      epsilon: 0.2
-      lambd: 0.95
-      num_epoch: 3
-      learning_rate_schedule: linear
+      # Learning rate: lower for stable learning with physics constraints
+      learning_rate: 0.0002
+      learning_rate_schedule: linear  # Decay over training
+
+      # Batch and buffer sizes
+      batch_size: 512          # Larger for stable gradients
+      buffer_size: 20480       # Increased buffer
+
+      # PPO-specific
+      beta: 0.01               # Higher entropy for exploration
+      epsilon: 0.2             # PPO clip range
+      lambd: 0.95              # GAE lambda
+      num_epoch: 3             # Training passes per update
+
+    # ====================================================================
+    # NETWORK ARCHITECTURE
+    # ====================================================================
     network_settings:
-      normalize: true
-      hidden_units: 256
-      num_layers: 3
+      # Deeper network for complex physics
+      hidden_units: 512        # Increased for better physics modeling
+      num_layers: 4            # Deeper network
+
+      normalize: true          # CRITICAL: Normalize inputs
+      vis_encode_type: simple
+
+    # ====================================================================
+    # REWARD SIGNAL
+    # ====================================================================
     reward_signals:
       extrinsic:
-        gamma: 0.99
         strength: 1.0
-    max_steps: 1000
-    time_horizon: 64
-    summary_freq: 2000
-    checkpoint_interval: 20000
+        gamma: 0.99            # Long-term planning
+
+    # ====================================================================
+    # MISC SETTINGS
+    # ====================================================================
+    max_steps: 3000000         # 3M steps for proper convergence
+    time_horizon: 256          # Steps per trajectory
+    summary_freq: 5000         # Log frequency
+
+    # Early stopping
+    keep_checkpoints: 10       # Keep more checkpoints
+    checkpoint_interval: 50000 # Save every 50k steps
+
+# ========================================================================
+# TRAINING CONFIGURATION
+# ========================================================================
+env_settings:
+  env_path: null
+  env_args: null
+  base_port: 5005
+  num_envs: 1
+  seed: 42
+
+# ========================================================================
+# ENGINE CONFIGURATION
+# ========================================================================
+engine_settings:
+  width: 1024      # Higher resolution for better visualization
+  height: 768
+  quality_level: 5
+  time_scale: 20  # Speed up training
+  target_frame_rate: -1
+  capture_frame_rate: 60
+  no_graphics: false  # Set to true for headless training

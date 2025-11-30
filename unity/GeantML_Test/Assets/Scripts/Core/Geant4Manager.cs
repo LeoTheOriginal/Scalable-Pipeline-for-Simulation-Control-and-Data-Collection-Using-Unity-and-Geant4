@@ -2,59 +2,134 @@
 
 namespace Core
 {
+    /// <summary>
+    /// Manages Geant4 physics engine lifecycle.
+    /// Supports both ElectronAgent (legacy) and ElectronAgentPhysics (new).
+    /// </summary>
     public class Geant4Manager : MonoBehaviour
     {
         public static Geant4Manager Instance { get; private set; }
 
+        private bool _geant4Initialized = false;
+
         void Awake()
         {
+            // Singleton pattern
             if (Instance != null && Instance != this)
             {
                 Destroy(gameObject);
                 return;
             }
             Instance = this;
-            // Nie używamy DontDestroyOnLoad w Edytorze, bo to czasem utrudnia debugowanie
-            // Ale w buildzie jest ok. Zostawmy.
             DontDestroyOnLoad(gameObject);
 
-            Debug.Log("[Geant4] Startup sequence...");
+            // Check if we need Geant4
+            bool needsGeant4 = ShouldInitializeGeant4();
 
-            // --- POPRAWKA 1: PREWENCYJNE CZYSZCZENIE ---
-            // Zanim spróbujemy cokolwiek stworzyć, upewnijmy się, że C++ jest czysty.
-            // Jeśli poprzednia sesja zostawiła śmieci, to je usunie.
+            if (!needsGeant4)
+            {
+                Debug.Log("[Geant4] Running in Inference Mode - Geant4 initialization SKIPPED");
+                return;
+            }
+
+            // Initialize Geant4 for training
+            Debug.Log("[Geant4] Startup sequence (Training Mode)...");
+
+            // Preventive cleanup
             try
             {
                 Geant4Interface.CloseGeant4();
             }
-            catch { /* Ignorujemy błędy przy czyszczeniu, bo może być już czysto */ }
+            catch
+            {
+                // Ignore errors - it's just cleanup
+            }
 
-            // --- INICJALIZACJA ---
+            // Initialize physics engine
             Debug.Log("[Geant4] Initializing Physics Engine...");
             try
             {
                 Geant4Interface.InitGeant4();
+                _geant4Initialized = true;
                 Debug.Log("[Geant4] ✅ Initialization Success");
             }
             catch (System.Exception e)
             {
                 Debug.LogError($"[Geant4] ❌ Initialization Failed: {e.Message}");
-                // Jeśli init się nie udał, od razu posprzątajmy
-                Geant4Interface.CloseGeant4();
+                Debug.LogError($"[Geant4] Stack trace: {e.StackTrace}");
+
+                try
+                {
+                    Geant4Interface.CloseGeant4();
+                }
+                catch
+                {
+                    // Already failed
+                }
             }
         }
 
-        // --- POPRAWKA 2: OnDestroy zamiast OnApplicationQuit ---
-        // OnDestroy jest wołane zawsze gdy obiekt jest niszczony (np. przy Stop w Edytorze).
-        // Jest pewniejsze w trybie edycji niż OnApplicationQuit.
+        /// <summary>
+        /// Determines if Geant4 should be initialized based on agent settings.
+        /// Supports both legacy ElectronAgent and new ElectronAgentPhysics.
+        /// </summary>
+        private bool ShouldInitializeGeant4()
+        {
+            // Check new ElectronAgentPhysics agents
+            var physicsAgents = FindObjectsOfType<Agents.ElectronAgentPhysics>();
+            foreach (var agent in physicsAgents)
+            {
+                // Geant4Statistical and Hybrid modes need Geant4
+                if (agent.Mode == Agents.TrainingMode.Geant4Statistical ||
+                    agent.Mode == Agents.TrainingMode.Hybrid)
+                {
+                    Debug.Log($"[Geant4] Agent '{agent.name}' requires Geant4 (Mode={agent.Mode})");
+                    return true;
+                }
+            }
+
+            // Check legacy ElectronAgent agents
+            var legacyAgents = FindObjectsOfType<Agents.ElectronAgent>();
+            foreach (var agent in legacyAgents)
+            {
+                if (!agent.IsInferenceMode)
+                {
+                    Debug.Log($"[Geant4] Legacy agent '{agent.name}' requires Geant4");
+                    return true;
+                }
+            }
+
+            // No agents found or all in inference/physics-only mode
+            if (physicsAgents.Length == 0 && legacyAgents.Length == 0)
+            {
+                Debug.LogWarning("[Geant4] No agents found - initializing Geant4 by default");
+                return true;
+            }
+
+            Debug.Log("[Geant4] All agents in Inference/PhysicsBased mode - Geant4 not required");
+            return false;
+        }
+
         void OnDestroy()
         {
-            // Upewniamy się, że to my niszczymy instancję (a nie duplikat)
-            if (Instance == this)
+            if (Instance == this && _geant4Initialized)
             {
                 Debug.Log("[Geant4] Cleaning up resources (OnDestroy)...");
-                Geant4Interface.CloseGeant4();
+                try
+                {
+                    Geant4Interface.CloseGeant4();
+                    Debug.Log("[Geant4] ✅ Cleanup successful");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[Geant4] Cleanup warning: {e.Message}");
+                }
             }
+        }
+
+        public bool IsGeant4Available()
+        {
+            return _geant4Initialized;
         }
     }
 }

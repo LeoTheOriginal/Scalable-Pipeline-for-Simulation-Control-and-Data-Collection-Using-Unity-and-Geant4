@@ -374,6 +374,12 @@ MonoBehaviour:
   MaxStep: 0
   MaxSteps: 500
   ShowVisualization: 1
+  IsInferenceMode: 1
+  UseScheduledSampling: 1
+  ScheduledSamplingEpisodes: 10000
+  MinTeacherForcingProb: 0.1
+  MaxStepSize: 0.05
+  PhantomHalfSize: 5
 --- !u!114 &677899089
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -396,10 +402,10 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: 6bf9fbd4865e5dc4cabc8ba0a4b046e9, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: 8a549bc762cb352479fe490ed8973589, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 2
-  m_BehaviorName: Geant4Agent
+  m_BehaviorName: ElectronAgent
   TeamId: 0
   m_UseChildSensors: 1
   m_UseChildActuators: 1

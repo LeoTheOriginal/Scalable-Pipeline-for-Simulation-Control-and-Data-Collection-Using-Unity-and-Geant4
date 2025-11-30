@@ -1,0 +1,56 @@
+{
+    "ElectronPhysics": {
+        "checkpoints": [
+            {
+                "steps": 199882,
+                "file_path": "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-199882.onnx",
+                "reward": -3449.851416015625,
+                "creation_time": 1764026803.411504,
+                "auxillary_file_paths": [
+                    "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-199882.pt"
+                ]
+            },
+            {
+                "steps": 299917,
+                "file_path": "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-299917.onnx",
+                "reward": -3969.4541867278344,
+                "creation_time": 1764027197.26379,
+                "auxillary_file_paths": [
+                    "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-299917.pt"
+                ]
+            },
+            {
+                "steps": 399805,
+                "file_path": "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-399805.onnx",
+                "reward": -2525.4021606445312,
+                "creation_time": 1764027583.1743863,
+                "auxillary_file_paths": [
+                    "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-399805.pt"
+                ]
+            },
+            {
+                "steps": 499887,
+                "file_path": "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-499887.onnx",
+                "reward": -2168.8187255859375,
+                "creation_time": 1764028116.0538142,
+                "auxillary_file_paths": [
+                    "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-499887.pt"
+                ]
+            },
+            {
+                "steps": 599977,
+                "file_path": "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-599977.onnx",
+                "reward": -1895.7433268229167,
+                "creation_time": 1764028636.6623108,
+                "auxillary_file_paths": [
+                    "results\\physics_model_test02\\ElectronPhysics\\ElectronPhysics-599977.pt"
+                ]
+            }
+        ]
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "1.13.1+cpu"
+    }
+}

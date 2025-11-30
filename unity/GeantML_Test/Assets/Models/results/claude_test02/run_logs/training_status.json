@@ -1,0 +1,110 @@
+{
+    "ElectronAgent": {
+        "checkpoints": [
+            {
+                "steps": 299950,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-299950.onnx",
+                "reward": -739.3155123841528,
+                "creation_time": 1763938664.2813632,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-299950.pt"
+                ]
+            },
+            {
+                "steps": 349964,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-349964.onnx",
+                "reward": -814.2367084209735,
+                "creation_time": 1763938928.6109366,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-349964.pt"
+                ]
+            },
+            {
+                "steps": 399960,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-399960.onnx",
+                "reward": -1032.6390653443568,
+                "creation_time": 1763939162.967123,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-399960.pt"
+                ]
+            },
+            {
+                "steps": 449977,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-449977.onnx",
+                "reward": -1440.6569281243658,
+                "creation_time": 1763939390.9246001,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-449977.pt"
+                ]
+            },
+            {
+                "steps": 499965,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-499965.onnx",
+                "reward": -2323.970433326284,
+                "creation_time": 1763939645.4582567,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-499965.pt"
+                ]
+            },
+            {
+                "steps": 549951,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-549951.onnx",
+                "reward": -2459.3005918210692,
+                "creation_time": 1763939901.8160682,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-549951.pt"
+                ]
+            },
+            {
+                "steps": 599982,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-599982.onnx",
+                "reward": -2583.590778854658,
+                "creation_time": 1763940170.074879,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-599982.pt"
+                ]
+            },
+            {
+                "steps": 649990,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-649990.onnx",
+                "reward": -2673.17898022289,
+                "creation_time": 1763940430.46106,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-649990.pt"
+                ]
+            },
+            {
+                "steps": 699977,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-699977.onnx",
+                "reward": -2523.7499836512975,
+                "creation_time": 1763940688.7097418,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-699977.pt"
+                ]
+            },
+            {
+                "steps": 703169,
+                "file_path": "results\\claude_test02\\ElectronAgent\\ElectronAgent-703169.onnx",
+                "reward": -2546.1717071533203,
+                "creation_time": 1763940708.597356,
+                "auxillary_file_paths": [
+                    "results\\claude_test02\\ElectronAgent\\ElectronAgent-703169.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 703169,
+            "file_path": "results\\claude_test02\\ElectronAgent.onnx",
+            "reward": -2546.1717071533203,
+            "creation_time": 1763940708.597356,
+            "auxillary_file_paths": [
+                "results\\claude_test02\\ElectronAgent\\ElectronAgent-703169.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "1.13.1+cpu"
+    }
+}
