@@ -7,12 +7,32 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Agents\\ElectronAgentPhysics.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\Geant4Manager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Core\\Geant4Manager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\TrajectoryVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Visualization\\TrajectoryVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\AgentFarmManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Agents\\AgentFarmManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\Geant4TrajectoryVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Visualization\\Geant4TrajectoryVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\NormalDistributionRewards.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Agents\\NormalDistributionRewards.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\G4TrajectoryVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Visualization\\G4TrajectoryVisualizer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\Geant4Interface.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Core\\Geant4Interface.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\Geant4Manager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Core\\Geant4Manager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\ElectronAgent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -61,20 +81,52 @@
           "SelectedChildIndex": 4,
           "Children": [
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AgentFarmManager.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\AgentFarmManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Agents\\AgentFarmManager.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\AgentFarmManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Agents\\AgentFarmManager.cs",
+              "ViewState": "AgIAAL0BAAAAAAAAAAAwwMABAAAnAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T21:05:47.072Z"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Geant4TrajectoryVisualizer.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\Geant4TrajectoryVisualizer.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Visualization\\Geant4TrajectoryVisualizer.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\Geant4TrajectoryVisualizer.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Visualization\\Geant4TrajectoryVisualizer.cs",
+              "ViewState": "AgIAABAAAAAAAAAAAAAhwE8AAAAuAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-08T19:52:05.66Z"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{57d563b6-44a5-47df-85be-f4199ad6b651}"
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "G4TrajectoryVisualizer.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\G4TrajectoryVisualizer.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Visualization\\G4TrajectoryVisualizer.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\G4TrajectoryVisualizer.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Visualization\\G4TrajectoryVisualizer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACYAAAAiAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-02T20:18:15.737Z"
             },
             {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "TrajectoryVisualizer.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\TrajectoryVisualizer.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Visualization\\TrajectoryVisualizer.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\TrajectoryVisualizer.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Visualization\\TrajectoryVisualizer.cs",
+              "ViewState": "AgIAANsBAAAAAAAAAAAwwAUCAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-02T01:47:54.368Z"
             },
             {
               "$type": "Document",
@@ -84,14 +136,26 @@
               "RelativeDocumentMoniker": "Assets\\Scripts\\Agents\\ElectronAgentPhysics.cs",
               "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\ElectronAgentPhysics.cs",
               "RelativeToolTip": "Assets\\Scripts\\Agents\\ElectronAgentPhysics.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAACEAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAALQAAAAAAAAAAAAgwC8CAABDAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-24T22:35:23.775Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
+              "Title": "NormalDistributionRewards.cs",
+              "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\NormalDistributionRewards.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Agents\\NormalDistributionRewards.cs",
+              "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\NormalDistributionRewards.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Agents\\NormalDistributionRewards.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAABGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-02T20:19:33.684Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
               "Title": "ElectronAgent.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\ElectronAgent.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Agents\\ElectronAgent.cs",
@@ -103,43 +167,43 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 7,
               "Title": "Geant4Manager.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\Geant4Manager.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Core\\Geant4Manager.cs",
               "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\Geant4Manager.cs",
               "RelativeToolTip": "Assets\\Scripts\\Core\\Geant4Manager.cs",
-              "ViewState": "AgIAAFsAAAAAAAAAAAAuwIcAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-22T22:25:23.448Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "Geant4Interface.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\Geant4Interface.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Core\\Geant4Interface.cs",
               "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\Geant4Interface.cs",
               "RelativeToolTip": "Assets\\Scripts\\Core\\Geant4Interface.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAO0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-22T22:24:40.115Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 9,
               "Title": "ElectronPhysics.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Physics\\ElectronPhysics.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Physics\\ElectronPhysics.cs",
               "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Physics\\ElectronPhysics.cs",
               "RelativeToolTip": "Assets\\Scripts\\Physics\\ElectronPhysics.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEBAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACEAAAA2AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-24T22:36:18.011Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 10,
               "Title": "ParticleVisualizer.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Visualization\\ParticleVisualizer.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Visualization\\ParticleVisualizer.cs",
@@ -151,7 +215,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 11,
               "Title": "BatchRenderer.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Performance\\BatchRenderer.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Performance\\BatchRenderer.cs",
@@ -163,7 +227,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 13,
               "Title": "DataModels.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Core\\DataModels.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Core\\DataModels.cs",
@@ -175,7 +239,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 12,
               "Title": "ServerConnection.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Networking\\ServerConnection.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Networking\\ServerConnection.cs",
@@ -187,7 +251,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 16,
               "Title": "DirectionSampler.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Utils\\DirectionSampler.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Utils\\DirectionSampler.cs",
@@ -199,7 +263,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 14,
               "Title": "ParticleAgentREST.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\ML-Agents\\ParticleAgentREST.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\ML-Agents\\ParticleAgentREST.cs",
@@ -211,7 +275,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 15,
               "Title": "RestClient.cs",
               "DocumentMoniker": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\REST\\RestClient.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\REST\\RestClient.cs",

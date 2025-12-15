@@ -1,229 +1,236 @@
-# ML-Agents Training Configuration for Electron Transport
-# 
-# This configuration file defines multiple training setups for comparison:
-# 1. PhysicsBased: Pure physics constraints, no trajectory matching
-# 2. Experimental: Distribution learning with stochastic sampling
-# 3. MultiAgent: Multiple agents for statistical validation
+# ML-Agents Training Configuration for Multi-Agent Electron Transport
+# Updated for 14-dimensional observation space with anti-spiral rewards
 #
 # Usage:
-#   mlagents-learn config/electron_physics.yaml --run-id=physics_v1
+#   mlagents-learn electron_physics.yaml --run-id=multi_agent_test_v1 --force
 #
-# For multi-agent:
-#   mlagents-learn config/electron_physics.yaml --run-id=multi_v1 --env-args="--multi-agent"
+# Observation Space (13 dimensions):
+#   1-3: Position (x, y, z) normalized
+#   4-6: Momentum direction (x, y, z) normalized
+#   7: Energy normalized
+#   8: Remaining range normalized
+#   9: Depth in phantom normalized
+#   10: Path length fraction
+#   11: Recent scattering mean
+#   12: Recent scattering variance
+#   13: Spiral indicator
 
 behaviors:
 
   # ============================================================================
-  # PHYSICS-BASED TRAINING (RECOMMENDED)
+  # MULTI-AGENT ELECTRON TRANSPORT (GEANT4 STATISTICAL MODE)
   # ============================================================================
-  # 
-  # This is the recommended approach for your thesis:
-  # - No trajectory matching with Geant4
-  # - Rewards based purely on physics constraints
-  # - Agent learns the underlying physics, not specific trajectories
+  #
+  # This configuration is optimized for:
+  # - Multiple agents training simultaneously (4 agents recommended)
+  # - Statistical validation against Geant4 Monte Carlo
+  # - Anti-spiral and anti-straight-line rewards
+  # - Realistic scattering behavior
   #
   ElectronPhysics:
     trainer_type: ppo
-    
-    # Hyperparameters tuned for physics learning
+
+    # Hyperparameters optimized for physics learning with multiple agents
     hyperparameters:
-      batch_size: 2048          # Larger batch for stable physics learning
-      buffer_size: 20480        # ~10 batches
+      batch_size: 2048          # Large batch for stable updates across agents
+      buffer_size: 20480        # ~10 batches worth of experience
       learning_rate: 1.0e-4     # Conservative LR for physics
-      learning_rate_schedule: linear
-      beta: 0.01                # Entropy bonus (encourage exploration)
-      epsilon: 0.2              # PPO clipping
+      learning_rate_schedule: linear  # Decay learning rate over time
+      beta: 0.01                # Entropy coefficient (encourage exploration)
+      epsilon: 0.2              # PPO clip range
       lambd: 0.95               # GAE lambda
-      num_epoch: 4              # PPO epochs per update
-    
+      num_epoch: 4              # Number of passes through experience buffer
+
     # Network architecture
     network_settings:
-      normalize: true           # Important for physics observations
-      hidden_units: 256         # Medium network
-      num_layers: 3             # Deeper for physics relationships
-      vis_encode_type: simple
-      
-    # Reward processing
-    reward_signals:
-      extrinsic:
-        gamma: 0.995            # Long horizon for trajectory rewards
-        strength: 1.0
-    
-    # Episode limits
-    max_steps: 5000000          # 5M steps total
-    time_horizon: 512           # Steps between updates
-    summary_freq: 10000
-    
-    # Checkpointing
-    keep_checkpoints: 5
-    checkpoint_interval: 100000
+      normalize: true           # CRITICAL: Normalize observations
+      hidden_units: 256         # Sufficient capacity for physics
+      num_layers: 3             # Deep enough to learn complex relationships
+      vis_encode_type: simple   # No visual observations
 
-  # ============================================================================
-  # EXPERIMENTAL: DISTRIBUTION LEARNING
-  # ============================================================================
-  #
-  # Agent learns to output parameters of scattering distribution
-  # More aligned with Monte Carlo physics nature
-  #
-  ElectronDistribution:
-    trainer_type: ppo
-    
-    hyperparameters:
-      batch_size: 1024
-      buffer_size: 10240
-      learning_rate: 5.0e-5     # Lower LR for distribution learning
-      learning_rate_schedule: linear
-      beta: 0.02                # Higher entropy for distribution exploration
-      epsilon: 0.15
-      lambd: 0.95
-      num_epoch: 3
-    
-    network_settings:
-      normalize: true
-      hidden_units: 128
-      num_layers: 2
-      
+    # Reward configuration
     reward_signals:
       extrinsic:
-        gamma: 0.99
-        strength: 1.0
-    
-    max_steps: 3000000
-    time_horizon: 256
-    summary_freq: 10000
+        gamma: 0.995            # Discount factor (long horizon for trajectories)
+        strength: 1.0           # Extrinsic reward scale
 
-  # ============================================================================
-  # MULTI-AGENT STATISTICAL VALIDATION
-  # ============================================================================
-  #
-  # Train multiple agents simultaneously
-  # Compare trajectory distributions across agents
-  #
-  ElectronMultiAgent:
-    trainer_type: ppo
-    
-    hyperparameters:
-      batch_size: 4096          # Larger batch for multiple agents
-      buffer_size: 40960
-      learning_rate: 1.0e-4
-      learning_rate_schedule: linear
-      beta: 0.01
-      epsilon: 0.2
-      lambd: 0.95
-      num_epoch: 4
-    
-    network_settings:
-      normalize: true
-      hidden_units: 256
-      num_layers: 3
-      
-    reward_signals:
-      extrinsic:
-        gamma: 0.995
-        strength: 1.0
-        
-      # Optional: curiosity for exploration
+      # Optional: Curiosity-driven exploration
+      # Uncomment if agents get stuck in local minima
       # curiosity:
       #   gamma: 0.99
-      #   strength: 0.01
+      #   strength: 0.005       # Small curiosity bonus
       #   network_settings:
       #     normalize: true
       #     hidden_units: 128
       #   learning_rate: 1.0e-4
-    
-    max_steps: 10000000         # More steps for multi-agent
-    time_horizon: 512
-    summary_freq: 10000
-    
-    # Self-play not applicable but could use team training
-    # for comparing agent behaviors
+
+    # Training limits
+    max_steps: 1000000          # 5M steps total (2-4 hours on modern GPU)
+    time_horizon: 512           # Steps between policy updates
+    summary_freq: 10000         # TensorBoard logging frequency
+
+    # Checkpointing
+    keep_checkpoints: 5         # Keep last 5 checkpoints
+    checkpoint_interval: 100000  # Save every 50k steps
+
+    # Self-play configuration (not used for electron transport)
+    # self_play: null
+
+    # Behavioral cloning (not used for this project)
+    # behavioral_cloning: null
 
   # ============================================================================
-  # TRAJECTORY-LEVEL REWARDS ONLY
+  # INFERENCE MODE (For Evaluation After Training)
   # ============================================================================
   #
-  # Rewards only applied at episode end
-  # Forces agent to learn complete trajectory patterns
+  # Use this configuration with trained model for inference-only evaluation
+  # Set agents to Mode: Inference and load .onnx model
   #
-  ElectronTrajectory:
+  ElectronPhysics_Inference:
     trainer_type: ppo
-    
-    hyperparameters:
-      batch_size: 512           # Smaller batch (fewer episodes)
-      buffer_size: 5120
-      learning_rate: 3.0e-4     # Higher LR for sparse rewards
-      learning_rate_schedule: constant
-      beta: 0.005
-      epsilon: 0.2
-      lambd: 0.99               # Higher lambda for trajectory credit
-      num_epoch: 6              # More epochs to extract signal
-    
+
+    # Same network architecture as training
     network_settings:
       normalize: true
       hidden_units: 256
       num_layers: 3
-      memory:                   # LSTM for trajectory memory
-        memory_size: 128
-        sequence_length: 64
-        
-    reward_signals:
-      extrinsic:
-        gamma: 0.999            # Very long horizon
-        strength: 1.0
-    
-    max_steps: 5000000
-    time_horizon: 1024          # Full episode
-    summary_freq: 5000
+
+    # No training, just inference
+    max_steps: 0
+    time_horizon: 512
+    summary_freq: 10000
 
 # ============================================================================
-# ENVIRONMENT SETTINGS
+# ENVIRONMENT PARAMETERS
 # ============================================================================
 #
-# These settings apply to all behaviors
+# Optional: Curriculum learning to gradually increase difficulty
 #
-#environment_parameters:
-#  # Curriculum learning: start with easier task
-#  # phantom_size:
-#  #   curriculum:
-#  #     - name: PhantomSizeLesson
-#  #       completion_criteria:
-#  #         measure: reward
-#  #         behavior: ElectronPhysics
-#  #         signal_smoothing: true
-#  #         min_lesson_length: 100
-#  #         threshold: 50.0
-#  #       value:
-#  #         curriculum:
-#  #           - value: 3.0    # Start with smaller phantom
-#  #           - value: 5.0    # Normal size
-#  pass
+# environment_parameters:
+#   # Start with easier physics (fewer steps required)
+#   max_episode_steps:
+#     curriculum:
+#       - name: EasyPhysics
+#         completion_criteria:
+#           measure: reward
+#           behavior: ElectronPhysics
+#           signal_smoothing: true
+#           min_lesson_length: 100
+#           threshold: 0.0        # Move to next lesson when reward > 0
+#         value: 300              # Start with shorter episodes
+#       - name: NormalPhysics
+#         value: 500              # Full episode length
 
 # ============================================================================
-# NOTES FOR YOUR THESIS
+# ENGINE CONFIGURATION
 # ============================================================================
 #
-# Recommended training procedure:
+# These settings control the ML-Agents Python trainer
 #
-# 1. First, train with ElectronPhysics configuration:
-#    mlagents-learn config/electron_physics.yaml --run-id=physics_v1
-#    
-#    This will teach the agent basic physics constraints without
-#    trying to match specific Geant4 trajectories.
+engine_settings:
+  width: 84                     # Rendering width (if using camera)
+  height: 84                    # Rendering height
+  quality_level: 5              # Unity quality setting
+  time_scale: 20                # Speed up training (20x faster than real-time)
+  target_frame_rate: -1         # Unlimited FPS
+  capture_frame_rate: 60        # For recording only
+
+# ============================================================================
+# CHECKPOINT SETTINGS
+# ============================================================================
+checkpoint_settings:
+  run_id: multi_agent_test      # Will be overridden by --run-id flag
+  initialize_from: null         # Set to path for transfer learning
+  load_model: false             # Load existing model
+  resume: false                 # Resume training
+  force: false                  # Overwrite existing run
+  train_model: true             # Enable training
+  inference: false              # Inference mode
+
+# ============================================================================
+# TENSORBOARD SETTINGS
+# ============================================================================
 #
-# 2. Validate statistically with ElectronMultiAgent:
-#    Run multiple agents and compare their trajectory distributions
-#    against Geant4 Monte Carlo distributions.
+# View results: tensorboard --logdir=results
 #
-# 3. Optional: Try ElectronDistribution for a more physics-aligned
-#    approach where the agent learns scattering distributions.
-#
-# Key metrics to monitor in TensorBoard:
-# - Environment/Cumulative Reward
-# - Policy/Entropy (should decrease over time)
+# Key metrics to monitor:
+# - Environment/Cumulative Reward (should increase to +150-250)
+# - Environment/Episode Length (should stabilize around 250-350 steps)
+# - Policy/Entropy (should slowly decrease)
 # - Losses/Policy Loss (should stabilize)
-# - Custom: Path length distribution, energy depletion curve
 #
-# Expected training time:
-# - 5M steps ≈ 2-4 hours on modern GPU
-# - Convergence usually visible around 1-2M steps
+# Custom metrics logged by ElectronAgentPhysics:
+# - Path length vs CSDA range
+# - Scattering statistics (mean, std dev, spiral indicator)
+# - Energy depletion curve
+# - Geant4 statistical comparison (path, depth, lateral, scattering)
+
+# ============================================================================
+# NOTES FOR TRAINING
+# ============================================================================
 #
+# 1. START TRAINING:
+#    mlagents-learn electron_physics.yaml --run-id=my_experiment --force
+#
+# 2. MONITOR IN TENSORBOARD:
+#    tensorboard --logdir=results
+#    Open: http://localhost:6006
+#
+# 3. EXPECTED CONVERGENCE:
+#    - 0-100k: Random exploration, reward ~ -300
+#    - 100k-500k: Learning basic physics, reward ~ -50
+#    - 500k-1M: Good trajectories, reward ~ +50 to +100
+#    - 1M-3M: Refined behavior, reward ~ +150 to +200
+#    - 3M+: Converged, reward ~ +200 to +250
+#
+# 4. MULTI-AGENT BENEFITS:
+#    - 4 agents = 4x faster step accumulation
+#    - Better gradient estimates (more diverse experience)
+#    - Statistical validation across agents
+#    - Demonstrates stochastic nature of learned policy
+#
+# 5. IF TRAINING STALLS:
+#    - Check TensorBoard for entropy (should be decreasing)
+#    - Verify agents aren't all exiting phantom (boundary penalty)
+#    - Check for "straight line" behavior (enable verbose logging)
+#    - Consider increasing W_ScatteringVariance or W_AntiSpiral
+#    - Try enabling curiosity reward signal
+#
+# 6. HYPERPARAMETER TUNING:
+#    - learning_rate: 5e-5 to 2e-4 (lower = more stable, higher = faster)
+#    - batch_size: 1024 to 4096 (larger = more stable updates)
+#    - beta: 0.005 to 0.02 (higher = more exploration)
+#    - num_epoch: 3 to 6 (more epochs = more learning per batch)
+#
+# 7. FOR YOUR THESIS:
+#    - Run multiple experiments with different reward weights
+#    - Compare learning curves (TensorBoard screenshots)
+#    - Analyze final trajectory statistics vs Geant4
+#    - Measure inference speed (FPS) vs Geant4 simulation
+#    - Document convergence time and computational resources
+#
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+#
+# ERROR: "Observation space mismatch"
+# FIX: Check Unity → Behavior Parameters → Space Size = 14
+#
+# ERROR: "Unable to connect to Unity"
+# FIX: Make sure Unity is in Play mode, port 5004 is not blocked
+#
+# WARNING: "Reward is constant"
+# CHECK: Agents might be stuck, enable verbose logging in Unity
+#
+# WARNING: "Policy loss exploding"
+# FIX: Reduce learning rate or increase batch size
+#
+# ISSUE: "Training very slow"
+# FIX: Disable Show Visualization, reduce agents, increase time_scale
+#
+# ISSUE: "All agents behave identically"
+# EXPECTED: They share the same network, but stochastic actions differ
+#
+# ============================================================================
+
+#mlagents-learn ..\Configs\electron_physics.yaml --run-id=ppo_base_v1 --force --time-scale=10

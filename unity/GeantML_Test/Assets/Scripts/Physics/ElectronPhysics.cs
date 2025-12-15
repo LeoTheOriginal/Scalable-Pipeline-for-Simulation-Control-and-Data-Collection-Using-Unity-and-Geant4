@@ -38,7 +38,7 @@ namespace Physics
         public const float PHANTOM_ENTRY_X = -5.0f;
 
         /// <summary>Initial position X in cm (before phantom)</summary>
-        public const float INITIAL_POS_X = -6.0f;
+        public const float INITIAL_POS_X = -5.0f;
 
         // ====================================================================
         // CSDA RANGE CALCULATION
@@ -269,6 +269,49 @@ namespace Physics
             // Rough approximation based on Highland formula integrated over path
             float theta0 = CalculateRMSScatteringAngle(energy, penetrationDepth);
             return penetrationDepth * theta0 / Mathf.Sqrt(3f);
+        }
+
+        // ====================================================================
+        // POSITION AND BOUNDARY HELPERS
+        // ====================================================================
+
+        /// <summary>
+        /// Get initial particle position (at phantom boundary).
+        /// Standard: -6 cm in X (1 cm before phantom entry)
+        /// </summary>
+        public static Vector3 GetInitialPosition()
+        {
+            return new Vector3(INITIAL_POS_X, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Get initial particle direction (along +X axis into phantom).
+        /// </summary>
+        public static Vector3 GetInitialDirection()
+        {
+            return new Vector3(1f, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Check if position is inside the water phantom.
+        /// Phantom is centered at origin, extends ±5 cm in all directions.
+        /// </summary>
+        public static bool IsInsidePhantom(Vector3 position)
+        {
+            return Mathf.Abs(position.x) <= PHANTOM_HALF_SIZE &&
+                   Mathf.Abs(position.y) <= PHANTOM_HALF_SIZE &&
+                   Mathf.Abs(position.z) <= PHANTOM_HALF_SIZE;
+        }
+
+        /// <summary>
+        /// Calculate distance outside phantom (0 if inside).
+        /// </summary>
+        public static float GetDistanceOutsidePhantom(Vector3 position)
+        {
+            float dx = Mathf.Max(0f, Mathf.Abs(position.x) - PHANTOM_HALF_SIZE);
+            float dy = Mathf.Max(0f, Mathf.Abs(position.y) - PHANTOM_HALF_SIZE);
+            float dz = Mathf.Max(0f, Mathf.Abs(position.z) - PHANTOM_HALF_SIZE);
+            return Mathf.Sqrt(dx * dx + dy * dy + dz * dz);
         }
     }
 }

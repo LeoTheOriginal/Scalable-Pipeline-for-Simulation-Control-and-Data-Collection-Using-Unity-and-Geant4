@@ -1,0 +1,37 @@
+behaviors:
+  ElectronPhysics:
+    trainer_type: ppo
+
+    hyperparameters:
+      batch_size: 1024          # Mniejszy batch przy LSTM ze względu na pamięć VRAM
+      buffer_size: 10240
+      learning_rate: 1.0e-4
+      learning_rate_schedule: linear
+      beta: 0.01
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 3
+      vis_encode_type: simple
+
+      # DODATEK: Pamięć rekurencyjna
+      memory:
+        sequence_length: 64     # Jak daleko wstecz agent "pamięta" (w krokach)
+        memory_size: 128        # Rozmiar wektora pamięci
+
+    reward_signals:
+      extrinsic:
+        gamma: 0.995
+        strength: 1.0
+
+    max_steps: 5000000
+    time_horizon: 64            # Musi pasować lub być wielokrotnością sequence_length
+    summary_freq: 10000
+
+
+
+#mlagents-learn ..\Configs\electron_ppo_lstm.yaml --run-id=ppo_lstm_v1 --force --time-scale=10

@@ -62,12 +62,16 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f2\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Visualization\Geant4TrajectoryVisualizer.cs" />
     <Compile Include="Assets\Scripts\Physics\ElectronPhysics.cs" />
+    <Compile Include="Assets\Scripts\Agents\AgentFarmManager.cs" />
     <Compile Include="Assets\Scripts\Agents\ElectronAgentPhysics.cs" />
+    <Compile Include="Assets\Scripts\Agents\NormalDistributionRewards.cs" />
     <Compile Include="Assets\Scripts\Core\Geant4Interface.cs" />
     <Compile Include="Assets\Scripts\Core\Geant4Manager.cs" />
     <Compile Include="Assets\Scripts\Agents\ElectronAgent.cs" />
     <Compile Include="Assets\Scripts\Core\DataModels.cs" />
+    <Compile Include="Assets\Scripts\Visualization\TrajectoryVisualizer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Packages\Microsoft.NET.StringTools.17.11.4\lib\netstandard2.0\Microsoft.NET.StringTools.xml" />
