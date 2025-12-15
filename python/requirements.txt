@@ -1,6 +1,0 @@
-fastapi
-uvicorn[standard]
-numpy
-msgpack
-lz4
-websockets
