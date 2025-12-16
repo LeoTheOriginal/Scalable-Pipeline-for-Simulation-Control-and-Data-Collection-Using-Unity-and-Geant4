@@ -135,9 +135,21 @@ PrefabInstance:
       value: TestTrainedAgent
       objectReference: {fileID: 0}
     - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: AgentCount
+      value: 24
+      objectReference: {fileID: 0}
+    - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: GlobalMaxSteps
+      value: 501
+      objectReference: {fileID: 0}
+    - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
       propertyPath: GlobalInferenceModel
       value: 
-      objectReference: {fileID: 5022602860645237092, guid: 3e539f8141f72fa43ad8cc5303db6aa1, type: 3}
+      objectReference: {fileID: 0}
+    - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: ApplyGlobalSettingsOnStart
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3850690641384838984, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -424,6 +436,14 @@ PrefabInstance:
     - target: {fileID: 8699421458875569088, guid: f0db7888fe7d70041b20c82136c8bc02, type: 3}
       propertyPath: Mode
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8699421458875569088, guid: f0db7888fe7d70041b20c82136c8bc02, type: 3}
+      propertyPath: RunOnStart
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8699421458875569088, guid: f0db7888fe7d70041b20c82136c8bc02, type: 3}
+      propertyPath: NumParticles
+      value: 10000
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

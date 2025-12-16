@@ -155,9 +155,29 @@ namespace Management
 
         private void DiscoverAgents()
         {
-            // Find all agents in children
-            ElectronAgentPhysics[] foundAgents = GetComponentsInChildren<ElectronAgentPhysics>();
+            _agents.Clear(); // Upewnij się, że lista jest czysta
+            _behaviorParameters.Clear();
 
+            // 1. Najpierw szukamy standardowo w dzieciach (jeśli skrypt jest na samej górze)
+            // Dodajemy 'true', aby znaleźć też nieaktywnych agentów (częsty błąd)
+            ElectronAgentPhysics[] foundAgents = GetComponentsInChildren<ElectronAgentPhysics>(true);
+
+            // 2. Jeśli nic nie znaleźliśmy, a mamy rodzica (przypadek z Twojego screena),
+            // szukamy w całym rodzicu (TrainingFarm_v2)
+            if (foundAgents.Length == 0 && transform.parent != null)
+            {
+                Debug.Log("[AgentFarmManager] Nie znaleziono agentów w dzieciach. Szukam w obiekcie nadrzędnym...");
+                foundAgents = transform.parent.GetComponentsInChildren<ElectronAgentPhysics>(true);
+            }
+
+            // 3. Ostateczność: Znajdź wszystkich agentów tego typu na scenie (Global search)
+            if (foundAgents.Length == 0)
+            {
+                Debug.LogWarning("[AgentFarmManager] Nadal brak agentów. Przeszukuję całą scenę (FindObjectsOfType)...");
+                foundAgents = FindObjectsOfType<ElectronAgentPhysics>(true);
+            }
+
+            // Przypisanie znalezionych agentów do list
             foreach (var agent in foundAgents)
             {
                 _agents.Add(agent);
@@ -168,6 +188,10 @@ namespace Management
                     _behaviorParameters.Add(bp);
                 }
             }
+
+            // Sortowanie po nazwie, aby indeksy (0, 1, 2...) odpowiadały kolejności środowisk (Environment_00, 01...)
+            // To ważne dla spójności wizualizacji i logów!
+            _agents.Sort((a, b) => string.Compare(a.transform.parent.parent.name, b.transform.parent.parent.name));
 
             Debug.Log($"[AgentFarmManager] Discovered {_agents.Count} agents");
         }
@@ -273,8 +297,19 @@ namespace Management
                 // Apply behavior type
                 if (bp != null)
                 {
-                    bp.BehaviorType = GlobalBehaviorType;
+                    // 1. Najpierw przypisz model (nawet jeśli null)
                     bp.Model = GlobalInferenceModel;
+
+                    // 2. Dopiero potem ustaw typ zachowania
+                    // (Dzięki temu Unity widzi, że model już jest, zanim przełączy tryb)
+                    bp.BehaviorType = GlobalBehaviorType;
+
+                    // Zabezpieczenie: Jeśli użytkownik wybrał Inference, ale zapomniał modelu -> wymuś Default
+                    if (GlobalBehaviorType == BehaviorType.InferenceOnly && GlobalInferenceModel == null)
+                    {
+                        Debug.LogWarning($"[AgentFarmManager] Agent #{agent.AgentIndex}: Wybrano InferenceOnly, ale brak modelu! Przełączam na Default.");
+                        bp.BehaviorType = BehaviorType.Default;
+                    }
                 }
 
                 // Apply training settings

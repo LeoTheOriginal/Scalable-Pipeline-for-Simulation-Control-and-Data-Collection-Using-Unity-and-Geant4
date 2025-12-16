@@ -1,0 +1,47 @@
+{
+    "ElectronPhysics": {
+        "checkpoints": [
+            {
+                "steps": 99987,
+                "file_path": "results\\ppo_base_v4\\ElectronPhysics\\ElectronPhysics-99987.onnx",
+                "reward": 2184.7789634590717,
+                "creation_time": 1765915836.273182,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_v4\\ElectronPhysics\\ElectronPhysics-99987.pt"
+                ]
+            },
+            {
+                "steps": 199869,
+                "file_path": "results\\ppo_base_v4\\ElectronPhysics\\ElectronPhysics-199869.onnx",
+                "reward": 2369.096970130657,
+                "creation_time": 1765915896.4506543,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_v4\\ElectronPhysics\\ElectronPhysics-199869.pt"
+                ]
+            },
+            {
+                "steps": 217973,
+                "file_path": "results\\ppo_base_v4\\ElectronPhysics\\ElectronPhysics-217973.onnx",
+                "reward": 2352.9898071289062,
+                "creation_time": 1765915910.2734537,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_v4\\ElectronPhysics\\ElectronPhysics-217973.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 217973,
+            "file_path": "results\\ppo_base_v4\\ElectronPhysics.onnx",
+            "reward": 2352.9898071289062,
+            "creation_time": 1765915910.2734537,
+            "auxillary_file_paths": [
+                "results\\ppo_base_v4\\ElectronPhysics\\ElectronPhysics-217973.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "1.13.1+cpu"
+    }
+}

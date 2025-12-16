@@ -1,0 +1,56 @@
+{
+    "ElectronPhysics": {
+        "checkpoints": [
+            {
+                "steps": 99954,
+                "file_path": "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-99954.onnx",
+                "reward": 711.537989616394,
+                "creation_time": 1765917184.536094,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-99954.pt"
+                ]
+            },
+            {
+                "steps": 199767,
+                "file_path": "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-199767.onnx",
+                "reward": 905.3538094979746,
+                "creation_time": 1765917259.984958,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-199767.pt"
+                ]
+            },
+            {
+                "steps": 299791,
+                "file_path": "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-299791.onnx",
+                "reward": 929.0749959309895,
+                "creation_time": 1765917339.1979249,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-299791.pt"
+                ]
+            },
+            {
+                "steps": 329511,
+                "file_path": "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-329511.onnx",
+                "reward": null,
+                "creation_time": 1765917361.4265583,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-329511.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 329511,
+            "file_path": "results\\ppo_base_deep_seekv1\\ElectronPhysics.onnx",
+            "reward": null,
+            "creation_time": 1765917361.4265583,
+            "auxillary_file_paths": [
+                "results\\ppo_base_deep_seekv1\\ElectronPhysics\\ElectronPhysics-329511.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "1.13.1+cpu"
+    }
+}

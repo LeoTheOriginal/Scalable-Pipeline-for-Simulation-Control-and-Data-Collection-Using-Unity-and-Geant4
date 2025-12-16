@@ -1,0 +1,65 @@
+{
+    "ElectronPhysics": {
+        "checkpoints": [
+            {
+                "steps": 99792,
+                "file_path": "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-99792.onnx",
+                "reward": 2499.711112154447,
+                "creation_time": 1765920257.8608534,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-99792.pt"
+                ]
+            },
+            {
+                "steps": 199804,
+                "file_path": "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-199804.onnx",
+                "reward": 2856.1743905203684,
+                "creation_time": 1765920347.4971561,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-199804.pt"
+                ]
+            },
+            {
+                "steps": 299859,
+                "file_path": "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-299859.onnx",
+                "reward": 2944.718027967088,
+                "creation_time": 1765920446.6055813,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-299859.pt"
+                ]
+            },
+            {
+                "steps": 399905,
+                "file_path": "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-399905.onnx",
+                "reward": 2960.178236219618,
+                "creation_time": 1765920551.00965,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-399905.pt"
+                ]
+            },
+            {
+                "steps": 452964,
+                "file_path": "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-452964.onnx",
+                "reward": null,
+                "creation_time": 1765920613.3798018,
+                "auxillary_file_paths": [
+                    "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-452964.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 452964,
+            "file_path": "results\\ppo_base_claude_v1\\ElectronPhysics.onnx",
+            "reward": null,
+            "creation_time": 1765920613.3798018,
+            "auxillary_file_paths": [
+                "results\\ppo_base_claude_v1\\ElectronPhysics\\ElectronPhysics-452964.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "1.13.1+cpu"
+    }
+}

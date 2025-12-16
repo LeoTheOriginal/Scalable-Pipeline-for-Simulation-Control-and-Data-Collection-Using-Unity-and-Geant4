@@ -260,7 +260,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 14
+    VectorObservationSize: 11
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 4
@@ -299,24 +299,24 @@ MonoBehaviour:
   ShowVisualization: 1
   MaxStepSize: 0.03
   MinStepSize: 0.005
+  MaxDirectionChange: 0.5
   W_ScatteringBounds: 10
   W_ScatteringVariance: 25
   W_AntiSpiral: 30
-  W_MeanScattering: 20
   MinScatteringStdDev: 2
-  W_Range: 20
-  SurvivalBonus: 0.01
-  W_TotalRange: 30
+  TargetMeanScattering: 5
+  W_MeanScattering: 20
+  W_LateralSpread: 40
+  TargetLateralSpread: 0.35
   W_EnergyDepletion: 25
+  W_PathLength: 15
+  SurvivalBonus: 0.01
   BoundaryExitPenalty: 50
-  W_Geant4Path: 25
-  W_Geant4Depth: 20
-  W_Geant4Lateral: 15
-  W_Geant4Scattering: 25
+  W_Geant4Match: 50
   StatisticalTolerance: 0.25
-  W_LateralDistribution: 15
-  W_StepLateral: 5
-  UseNormalDistributionRewards: 1
+  W_ExplorationBonus: 10
+  W_StraightLinePenalty: 30
+  MinAnglePerStep: 1
   VerboseLogging: 0
   LogInterval: 50
 --- !u!114 &4433734839543153507

@@ -10,43 +10,26 @@ using Random = UnityEngine.Random;
 
 namespace Agents
 {
-    /// <summary>
-    /// Training mode for the electron agent.
-    /// </summary>
     public enum TrainingMode
     {
-        /// <summary>
-        /// Physics-based training: rewards based on physical constraints only,
-        /// no Geant4 reference. Best for learning physics from scratch.
-        /// </summary>
         PhysicsBased,
-
-        /// <summary>
-        /// Geant4 Statistical: runs Geant4 each episode, compares trajectory
-        /// STATISTICS (not step-by-step). This is the recommended mode for thesis.
-        /// Combines physics constraints with Geant4 statistical validation.
-        /// </summary>
         Geant4Statistical,
-
-        /// <summary>
-        /// Inference only: no training, no Geant4, just run the learned policy.
-        /// Use this mode after training to evaluate the model.
-        /// </summary>
         Inference
     }
 
     /// <summary>
-    /// Electron transport RL agent with REALISTIC SCATTERING requirements.
+    /// VERSION 6: Angular Diversity + Progressive Boundaries
     /// 
-    /// KEY FIX: Agent MUST scatter realistically, not just go straight!
-    /// - Anti-spiral detection: penalizes consistent same-direction turns
-    /// - Scattering distribution matching: requires variance in angles
-    /// - Minimum deflection requirement: can't just go straight
+    /// KEY INSIGHT from Geant4:
+    /// - Electrons scatter in ALL directions (full 360° coverage)
+    /// - Scattering creates OUTWARD curving arcs (not just random)
+    /// - Deep penetration + wide spread = "dandelion" shape
     /// 
-    /// Multi-agent support:
-    /// - Each agent has unique AgentIndex for identification
-    /// - Agents can have different reward weights for comparison
-    /// - TensorBoard logs are tagged by agent index
+    /// FIXES:
+    /// - Reward for angular diversity (prevent mode collapse)
+    /// - Progressive boundary penalty (not hard cutoff)
+    /// - Encourage exploration of ALL directions
+    /// - Higher entropy to prevent premature convergence
     /// </summary>
     public class ElectronAgentPhysics : Agent
     {
@@ -55,168 +38,140 @@ namespace Agents
         // ====================================================================
 
         [Header("Training Configuration")]
-        [Tooltip("Training approach to use")]
         public TrainingMode Mode = TrainingMode.Geant4Statistical;
-
-        [Tooltip("Agent index for multi-agent training (0, 1, 2, ...).")]
         public int AgentIndex = 0;
 
         [Header("Simulation Settings")]
-        [Tooltip("Maximum steps per episode. Typical trajectories complete in 250-350 steps.")]
         public int MaxSteps = 500;
-
-        [Tooltip("Show trajectory visualization (position updates on Transform)")]
         public bool ShowVisualization = true;
 
         [Header("Physics Constraints")]
-        [Tooltip("Maximum step size in cm")]
         public float MaxStepSize = 0.03f;
-
-        [Tooltip("Minimum step size in cm")]
         public float MinStepSize = 0.005f;
+        public float MaxDirectionChange = 0.5f;
 
-        [Header("=== CRITICAL: Scattering Requirements ===")]
-        [Tooltip("Weight for scattering angle being within Highland bounds")]
-        public float W_ScatteringBounds = 10f;
-
-        [Tooltip("Weight for having VARIANCE in scattering (anti-straight-line)")]
-        public float W_ScatteringVariance = 25f;
-
-        [Tooltip("Weight for anti-spiral (penalize consistent same-direction turns)")]
-        public float W_AntiSpiral = 30f;
-
-        [Tooltip("Weight for matching expected mean scattering angle")]
+        [Header("=== Scattering Reward Weights ===")]
+        public float W_ScatteringBounds = 25f;
+        public float W_ScatteringVariance = 40f;
+        public float W_AntiSpiral = 35f;
+        public float MinScatteringStdDev = 2.5f;
+        public float TargetMeanScattering = 5f;
         public float W_MeanScattering = 20f;
 
-        [Tooltip("Minimum required scattering angle std dev (degrees)")]
-        public float MinScatteringStdDev = 2f;
+        [Header("=== Lateral Spread Rewards ===")]
+        public float W_LateralSpread = 40f;
+        public float TargetLateralSpread = 0.35f;
 
-        [Header("Step Reward Weights")]
-        [Tooltip("Weight for energy-range consistency (CSDA relationship)")]
-        public float W_Range = 15f;
-
-        [Tooltip("Small survival bonus per step")]
-        public float SurvivalBonus = 0.01f;
-
-        [Header("Episode-End Reward Weights")]
-        [Tooltip("Weight for total path length vs CSDA range")]
-        public float W_TotalRange = 20f;
-
-        [Tooltip("Weight for proper energy depletion")]
+        [Header("=== Energy/Path Rewards ===")]
         public float W_EnergyDepletion = 20f;
+        public float W_PathLength = 15f;
+        public float SurvivalBonus = 0.01f;
+        public float BoundaryExitPenalty = 30f;
 
-        [Tooltip("Fixed penalty for exiting phantom boundaries")]
-        public float BoundaryExitPenalty = 50f;
-
-        [Header("Geant4 Statistical Comparison Weights")]
-        [Tooltip("Weight for path length match with Geant4")]
-        public float W_Geant4Path = 20f;
-
-        [Tooltip("Weight for final depth match with Geant4")]
-        public float W_Geant4Depth = 15f;
-
-        [Tooltip("Weight for lateral spread match with Geant4")]
-        public float W_Geant4Lateral = 15f;
-
-        [Tooltip("Weight for scattering distribution match with Geant4")]
-        public float W_Geant4Scattering = 25f;
-
-        [Tooltip("Tolerance for statistical match (0.25 = 25%)")]
+        [Header("=== Geant4 Statistical Comparison ===")]
+        public float W_Geant4Match = 50f;
         [Range(0.1f, 0.5f)]
-        public float StatisticalTolerance = 0.25f;
+        public float StatisticalTolerance = 0.30f;
 
-        [Header("Lateral Distribution Rewards (Normal Distribution)")]
-        [Tooltip("Weight for lateral deviation matching normal distribution")]
-        public float W_LateralDistribution = 15f;
+        [Header("=== Exploration Bonuses ===")]
+        public float W_ExplorationBonus = 10f;
+        public float W_StraightLinePenalty = 30f;
+        public float MinAnglePerStep = 1.0f;
 
-        [Tooltip("Weight for step-level lateral change")]
-        public float W_StepLateral = 5f;
+        [Header("=== Forward Progress (Critical!) ===")]
+        public float W_ForwardProgress = 100f;
+        public float W_BackscatterPenalty = 25f;
+        public float MaxScatterAnglePerStep = 20f;
 
-        [Tooltip("Enable normal distribution rewards")]
-        public bool UseNormalDistributionRewards = true;
+        [Header("=== Initial Straight Section ===")]
+        public float W_InitialStraight = 80f;
+        public float InitialStraightEnergyThreshold = 0.75f;
+
+        [Header("=== V6: Angular Diversity (Prevent Mode Collapse!) ===")]
+        [Tooltip("Weight for exploring all angular directions")]
+        public float W_AngularDiversity = 60f;
+
+        [Tooltip("Number of angular sectors to track (8 = 45° each)")]
+        public int AngularSectors = 8;
+
+        [Tooltip("Bonus for hitting unexplored angular sector")]
+        public float UnexploredSectorBonus = 15f;
+
+        [Header("=== V6: Progressive Boundary Penalty ===")]
+        [Tooltip("Soft boundary starts at this fraction of phantom size")]
+        public float SoftBoundaryStart = 0.8f;
+
+        [Tooltip("Maximum penalty at phantom edge (not death)")]
+        public float MaxBoundaryPenalty = 5f;
+
+        [Header("=== V6: Outward Arc Reward ===")]
+        [Tooltip("Reward for scattering AWAY from center axis")]
+        public float W_OutwardScatter = 30f;
 
         [Header("Debug")]
-        [Tooltip("Log detailed step information")]
         public bool VerboseLogging = false;
-
-        [Tooltip("Log every N steps")]
         public int LogInterval = 50;
 
         // ====================================================================
-        // EVENTS (for visualization)
+        // EVENTS
         // ====================================================================
 
-        /// <summary>
-        /// Event fired when agent takes a step. Use for trajectory visualization.
-        /// </summary>
         public event Action<Vector3> OnStepTaken;
-
-        /// <summary>
-        /// Event fired when episode begins. Use to clear trajectory visualization.
-        /// </summary>
         public event Action OnEpisodeReset;
 
         // ====================================================================
         // PRIVATE STATE
         // ====================================================================
 
-        // Current particle state
         private Vector3 _position;
         private Vector3 _momentumDirection;
         private float _energy;
 
-        // Previous step state
         private Vector3 _previousPosition;
         private Vector3 _previousDirection;
         private float _previousEnergy;
 
-        // Initial state
         private Vector3 _initialPosition;
         private Vector3 _initialDirection;
         private float _initialEnergy;
+        private float _expectedCSDARange;
 
-        // Trajectory tracking
         private int _currentStep;
         private float _cumulativePathLength;
         private float _totalEnergyDeposited;
         private List<Vector3> _trajectoryPositions;
         private List<float> _trajectoryEnergies;
 
-        // Lateral position tracking for distribution rewards
+        private List<float> _scatteringAngles;
+        private List<Vector3> _scatteringAxes;
+        private Vector3 _cumulativeAngularMomentum;
+
         private List<float> _lateralPositionsY;
         private List<float> _lateralPositionsZ;
-        private float _previousLateralY;
-        private float _previousLateralZ;
 
-        // SCATTERING TRACKING (critical for anti-straight-line)
-        private List<float> _scatteringAngles;          // Magnitude of each scatter
-        private List<Vector3> _scatteringAxes;          // Axis of each scatter (for spiral detection)
-        private Vector3 _cumulativeAngularMomentum;     // Detects spiraling
-        private float _totalAbsoluteScattering;         // Sum of |angle|
+        private List<Vector3> _recentDirections;
+        private const int DIRECTION_HISTORY_SIZE = 20;
 
-        // Physics reference values
-        private float _expectedCSDARange;
-        private float _remainingRange;
+        // V6: Angular sector tracking
+        private int[] _angularSectorHits;
+        private float _totalAngularCoverage;
 
-        // Episode termination state
         private bool _exitedBoundary;
+        private float _episodeRewardSum;
 
-        // Geant4 data
         private float[] _geant4Buffer;
         private int _geant4TrajectoryLength;
         private float _geant4PathLength;
         private float _geant4FinalDepth;
         private float _geant4LateralSpread;
-        private float _geant4FinalEnergy;
         private float _geant4MeanScatterAngle;
         private float _geant4ScatterStdDev;
         private bool _geant4DataValid;
 
-        // Statistics
-        private float _episodeRewardSum;
         private int _totalEpisodes;
         private int _boundaryExitCount;
-        private int _straightLineCount; // Episodes that were too straight
+        private int _goodScatteringCount;
+        private int _straightLineCount;
 
         // ====================================================================
         // INITIALIZATION
@@ -230,18 +185,14 @@ namespace Agents
             _scatteringAxes = new List<Vector3>(MaxSteps);
             _lateralPositionsY = new List<float>(MaxSteps);
             _lateralPositionsZ = new List<float>(MaxSteps);
+            _recentDirections = new List<Vector3>(DIRECTION_HISTORY_SIZE);
             _geant4Buffer = new float[MaxSteps * 7];
+            _angularSectorHits = new int[AngularSectors];
 
-            _expectedCSDARange = ElectronPhysics.GetInitialCSDARange();
-            _totalEpisodes = 0;
-            _boundaryExitCount = 0;
-            _straightLineCount = 0;
-
-            Debug.Log($"[ElectronAgent #{AgentIndex}] Initialized with ANTI-SPIRAL protection");
-            Debug.Log($"  Mode: {Mode}");
-            Debug.Log($"  Initial Position: {ElectronPhysics.GetInitialPosition()}");
-            Debug.Log($"  Min Scattering StdDev: {MinScatteringStdDev}°");
-            Debug.Log($"  Anti-Spiral Weight: {W_AntiSpiral}");
+            Debug.Log($"[ElectronAgent #{AgentIndex}] VERSION 6 - Angular Diversity + Progressive Boundaries!");
+            Debug.Log($"  Angular Sectors: {AngularSectors}");
+            Debug.Log($"  W_AngularDiversity: {W_AngularDiversity}");
+            Debug.Log($"  W_OutwardScatter: {W_OutwardScatter}");
         }
 
         // ====================================================================
@@ -257,23 +208,26 @@ namespace Agents
             _geant4DataValid = false;
             _exitedBoundary = false;
             _cumulativeAngularMomentum = Vector3.zero;
-            _totalAbsoluteScattering = 0f;
+            _totalAngularCoverage = 0f;
 
             _trajectoryPositions.Clear();
             _trajectoryEnergies.Clear();
-
-            _lateralPositionsY.Clear();
-            _lateralPositionsZ.Clear();
-            _previousLateralY = 0f;
-            _previousLateralZ = 0f;
-
             _scatteringAngles.Clear();
             _scatteringAxes.Clear();
+            _lateralPositionsY.Clear();
+            _lateralPositionsZ.Clear();
+            _recentDirections.Clear();
 
-            // Standard initial conditions at phantom boundary
+            // Reset angular sector tracking
+            for (int i = 0; i < AngularSectors; i++)
+            {
+                _angularSectorHits[i] = 0;
+            }
+
             _initialPosition = ElectronPhysics.GetInitialPosition();
             _initialDirection = ElectronPhysics.GetInitialDirection();
             _initialEnergy = ElectronPhysics.INITIAL_ENERGY;
+            _expectedCSDARange = ElectronPhysics.CalculateCSDARange(_initialEnergy);
 
             _position = _initialPosition;
             _momentumDirection = _initialDirection;
@@ -283,10 +237,6 @@ namespace Agents
             _previousDirection = _momentumDirection;
             _previousEnergy = _energy;
 
-            _expectedCSDARange = ElectronPhysics.CalculateCSDARange(_energy);
-            _remainingRange = _expectedCSDARange;
-
-            // Get Geant4 reference
             if (Mode == TrainingMode.Geant4Statistical)
             {
                 FetchGeant4Reference();
@@ -295,7 +245,6 @@ namespace Agents
             _trajectoryPositions.Add(_position);
             _trajectoryEnergies.Add(_energy);
 
-            // Fire event for visualization
             OnEpisodeReset?.Invoke();
 
             if (ShowVisualization)
@@ -304,17 +253,10 @@ namespace Agents
             }
 
             _totalEpisodes++;
-
-            if (VerboseLogging)
-            {
-                Debug.Log($"[Agent #{AgentIndex}] Episode {CompletedEpisodes} started");
-            }
         }
 
         private void FetchGeant4Reference()
         {
-            if (Mode == TrainingMode.Inference) return;
-
             try
             {
                 _geant4TrajectoryLength = Geant4Interface.RunSimulationBatch(_geant4Buffer, MaxSteps);
@@ -324,22 +266,8 @@ namespace Agents
                     _geant4PathLength = CalculateGeant4PathLength();
                     _geant4FinalDepth = GetGeant4FinalDepth();
                     _geant4LateralSpread = GetGeant4LateralSpread();
-                    _geant4FinalEnergy = GetGeant4FinalEnergy();
-
-                    // Calculate Geant4 scattering statistics
                     CalculateGeant4ScatteringStats();
-
                     _geant4DataValid = true;
-
-                    if (VerboseLogging)
-                    {
-                        Debug.Log($"[Agent #{AgentIndex}] Geant4: path={_geant4PathLength:F2}cm, " +
-                                 $"meanScatter={_geant4MeanScatterAngle:F2}°, stdDev={_geant4ScatterStdDev:F2}°");
-                    }
-                }
-                else
-                {
-                    _geant4DataValid = false;
                 }
             }
             catch (Exception e)
@@ -348,10 +276,6 @@ namespace Agents
                 _geant4DataValid = false;
             }
         }
-
-        // ====================================================================
-        // GEANT4 SCATTERING STATISTICS
-        // ====================================================================
 
         private void CalculateGeant4ScatteringStats()
         {
@@ -372,19 +296,16 @@ namespace Agents
 
                 if (dir1.magnitude > 0.001f && dir2.magnitude > 0.001f)
                 {
-                    float angle = Vector3.Angle(dir1, dir2);
-                    g4Angles.Add(angle);
+                    g4Angles.Add(Vector3.Angle(dir1, dir2));
                 }
             }
 
             if (g4Angles.Count > 0)
             {
-                // Calculate mean
                 float sum = 0f;
                 foreach (float a in g4Angles) sum += a;
                 _geant4MeanScatterAngle = sum / g4Angles.Count;
 
-                // Calculate std dev
                 float variance = 0f;
                 foreach (float a in g4Angles)
                 {
@@ -395,7 +316,7 @@ namespace Agents
             }
             else
             {
-                _geant4MeanScatterAngle = 5f; // Default expected value
+                _geant4MeanScatterAngle = TargetMeanScattering;
                 _geant4ScatterStdDev = 3f;
             }
         }
@@ -429,29 +350,10 @@ namespace Agents
                              _geant4Buffer[idx + 2] * _geant4Buffer[idx + 2]);
         }
 
-        private float GetGeant4FinalEnergy()
-        {
-            if (_geant4TrajectoryLength < 1) return 0f;
-            int idx = (_geant4TrajectoryLength - 1) * 7;
-            return _geant4Buffer[idx + 6];
-        }
-
         // ====================================================================
-        // OBSERVATIONS
+        // OBSERVATIONS (11 values - unchanged!)
         // ====================================================================
 
-        /// <summary>
-        /// Observation space (14 values):
-        /// - Position (3): x, y, z normalized
-        /// - Momentum direction (3): normalized direction vector
-        /// - Energy (1): normalized by initial
-        /// - Remaining range (1): normalized by CSDA
-        /// - Depth in phantom (1): normalized
-        /// - Path length fraction (1): cumulative / CSDA
-        /// - Recent scattering mean (1): average of last 10 scattering angles
-        /// - Recent scattering variance (1): variance of last 10 angles
-        /// - Spiral indicator (1): magnitude of cumulative angular momentum
-        /// </summary>
         public override void CollectObservations(VectorSensor sensor)
         {
             // Position (3)
@@ -465,35 +367,24 @@ namespace Agents
             sensor.AddObservation(_momentumDirection.z);
 
             // Energy (1)
-            sensor.AddObservation(_energy / ElectronPhysics.INITIAL_ENERGY);
+            sensor.AddObservation(_energy / _initialEnergy);
 
-            // Remaining range (1)
-            _remainingRange = ElectronPhysics.CalculateRemainingRange(_energy);
-            sensor.AddObservation(_remainingRange / _expectedCSDARange);
+            // Step progress (1)
+            sensor.AddObservation((float)_currentStep / MaxSteps);
 
-            // Depth in phantom (1)
-            float depthInPhantom = (_position.x - ElectronPhysics.PHANTOM_ENTRY_X) / (2f * ElectronPhysics.PHANTOM_HALF_SIZE);
-            sensor.AddObservation(Mathf.Clamp01(depthInPhantom));
-
-            // Path length fraction (1)
-            float pathFraction = _cumulativePathLength / _expectedCSDARange;
-            sensor.AddObservation(Mathf.Clamp(pathFraction, 0f, 2f) / 2f);
-
-            // Recent scattering statistics (helps agent know if it's scattering enough)
+            // Recent scattering statistics (2)
             float recentMean = 0f;
             float recentVariance = 0f;
             int lookback = Mathf.Min(10, _scatteringAngles.Count);
 
             if (lookback > 0)
             {
-                // Calculate mean of recent angles
                 for (int i = _scatteringAngles.Count - lookback; i < _scatteringAngles.Count; i++)
                 {
                     recentMean += _scatteringAngles[i];
                 }
                 recentMean /= lookback;
 
-                // Calculate variance
                 for (int i = _scatteringAngles.Count - lookback; i < _scatteringAngles.Count; i++)
                 {
                     float diff = _scatteringAngles[i] - recentMean;
@@ -502,19 +393,16 @@ namespace Agents
                 recentVariance /= lookback;
             }
 
-            // Recent scattering mean (1) - normalized to ~[0,1] assuming max ~30 degrees
             sensor.AddObservation(recentMean / 30f);
-
-            // Recent scattering variance (1) - normalized
             sensor.AddObservation(Mathf.Sqrt(recentVariance) / 15f);
 
-            // Spiral indicator (1) - how much is the agent spiraling?
+            // Spiral indicator (1)
             float spiralMagnitude = _cumulativeAngularMomentum.magnitude / Mathf.Max(1f, _currentStep);
             sensor.AddObservation(Mathf.Clamp01(spiralMagnitude * 10f));
         }
 
         // ====================================================================
-        // ACTIONS
+        // ACTIONS - V6 with Progressive Boundaries
         // ====================================================================
 
         public override void OnActionReceived(ActionBuffers actions)
@@ -527,12 +415,22 @@ namespace Agents
 
             var act = actions.ContinuousActions;
 
-            Vector3 deltaDirection = new Vector3(act[0], act[1], act[2]);
+            Vector3 directionDelta = new Vector3(act[0], act[1], act[2]);
             float stepSizeFactor = (act[3] + 1f) / 2f;
 
-            ApplyAction(deltaDirection, stepSizeFactor);
+            ApplyPureAgentAction(directionDelta, stepSizeFactor);
 
-            if (!IsInPhantom(_position))
+            // ================================================================
+            // V6: PROGRESSIVE BOUNDARY PENALTIES (not death!)
+            // ================================================================
+            float boundaryPenalty = CalculateProgressiveBoundaryPenalty();
+            if (boundaryPenalty > 0f)
+            {
+                AddReward(-boundaryPenalty);
+            }
+
+            // Only end episode if going BACKWARD out of phantom
+            if (_position.x < ElectronPhysics.PHANTOM_ENTRY_X - 0.5f)
             {
                 _exitedBoundary = true;
                 ProcessEpisodeEnd();
@@ -543,21 +441,11 @@ namespace Agents
             AddReward(reward);
             _episodeRewardSum += reward;
 
-            // ====================================================================
-            // ❌ BŁĄD: TĘ LINIĘ PONIŻEJ MUSISZ USUNĄĆ! 
-            // Ona wysyła pozycję lokalną, co psuje wizualizację (tworzy "gwiazdę" na środku).
-            // OnStepTaken?.Invoke(_position);  <-- USUŃ TO
-            // ====================================================================
-
-            // 1. Najpierw zaktualizuj fizyczną pozycję Unity
             if (ShowVisualization)
             {
-                // _position to pozycja lokalna względem TrainingEnvironment
                 transform.localPosition = _position;
             }
 
-            // ✅ 2. To jest poprawne wywołanie (Global Position)
-            // Dzięki temu LineRenderer dostanie koordynaty świata.
             OnStepTaken?.Invoke(transform.position);
 
             if (VerboseLogging && _currentStep % LogInterval == 0)
@@ -568,7 +456,44 @@ namespace Agents
             _currentStep++;
         }
 
-        private void ApplyAction(Vector3 deltaDirection, float stepSizeFactor)
+        /// <summary>
+        /// V6: Progressive boundary penalty instead of hard cutoff.
+        /// Penalty increases as agent approaches edge, but doesn't end episode.
+        /// </summary>
+        private float CalculateProgressiveBoundaryPenalty()
+        {
+            float penalty = 0f;
+            float phantomSize = ElectronPhysics.PHANTOM_HALF_SIZE;
+            float softBoundary = phantomSize * SoftBoundaryStart;
+
+            // Check Y boundary
+            float yAbs = Mathf.Abs(_position.y);
+            if (yAbs > softBoundary)
+            {
+                float overshoot = (yAbs - softBoundary) / (phantomSize - softBoundary);
+                penalty += MaxBoundaryPenalty * overshoot * overshoot;  // Quadratic increase
+            }
+
+            // Check Z boundary
+            float zAbs = Mathf.Abs(_position.z);
+            if (zAbs > softBoundary)
+            {
+                float overshoot = (zAbs - softBoundary) / (phantomSize - softBoundary);
+                penalty += MaxBoundaryPenalty * overshoot * overshoot;
+            }
+
+            // Check X forward boundary (past phantom exit)
+            float xMax = ElectronPhysics.PHANTOM_ENTRY_X + 2f * phantomSize;
+            if (_position.x > xMax)
+            {
+                float overshoot = (_position.x - xMax) / phantomSize;
+                penalty += MaxBoundaryPenalty * overshoot;
+            }
+
+            return penalty;
+        }
+
+        private void ApplyPureAgentAction(Vector3 directionDelta, float stepSizeFactor)
         {
             _previousPosition = _position;
             _previousDirection = _momentumDirection;
@@ -576,200 +501,305 @@ namespace Agents
 
             float stepSize = Mathf.Lerp(MinStepSize, MaxStepSize, stepSizeFactor);
 
-            // Calculate new direction
-            Vector3 directionDelta = deltaDirection * 0.3f;
-            Vector3 newDirection = (_momentumDirection + directionDelta).normalized;
+            Vector3 scaledDelta = directionDelta * MaxDirectionChange;
+            Vector3 proposedDirection = (_momentumDirection + scaledDelta).normalized;
 
-            if (newDirection.magnitude < 0.001f)
+            if (proposedDirection.magnitude < 0.001f)
             {
-                newDirection = _momentumDirection;
+                proposedDirection = _momentumDirection;
             }
 
-            // Calculate scattering angle (magnitude)
+            float proposedAngle = Vector3.Angle(_momentumDirection, proposedDirection);
+
+            Vector3 newDirection;
+            if (proposedAngle > MaxScatterAnglePerStep)
+            {
+                float clampedAngle = MaxScatterAnglePerStep;
+                Vector3 rotationAxis = Vector3.Cross(_momentumDirection, proposedDirection).normalized;
+
+                if (rotationAxis.magnitude < 0.001f)
+                {
+                    rotationAxis = Vector3.Cross(_momentumDirection, Vector3.up).normalized;
+                    if (rotationAxis.magnitude < 0.001f)
+                    {
+                        rotationAxis = Vector3.Cross(_momentumDirection, Vector3.right).normalized;
+                    }
+                }
+
+                Quaternion rotation = Quaternion.AngleAxis(clampedAngle, rotationAxis);
+                newDirection = (rotation * _momentumDirection).normalized;
+            }
+            else
+            {
+                newDirection = proposedDirection;
+            }
+
             float scatterAngle = Vector3.Angle(_momentumDirection, newDirection);
             _scatteringAngles.Add(scatterAngle);
-            _totalAbsoluteScattering += scatterAngle;
 
-            // Calculate scattering axis (for spiral detection)
             Vector3 scatterAxis = Vector3.Cross(_momentumDirection, newDirection);
             _scatteringAxes.Add(scatterAxis);
-
-            // Accumulate angular momentum (spiral detection)
-            // If agent always turns the same way, this will grow large
             _cumulativeAngularMomentum += scatterAxis;
 
-            // Update direction
+            // V6: Track angular sector
+            UpdateAngularSector(newDirection);
+
+            _recentDirections.Add(newDirection);
+            if (_recentDirections.Count > DIRECTION_HISTORY_SIZE)
+            {
+                _recentDirections.RemoveAt(0);
+            }
+
             _momentumDirection = newDirection;
 
-            // Update position
             Vector3 deltaPos = _momentumDirection * stepSize;
             _position += deltaPos;
             _cumulativePathLength += stepSize;
 
-            // Physics-based energy loss
             float energyLoss = ElectronPhysics.CalculateEnergyLoss(_energy, stepSize);
-            float fluctuation = Random.Range(0.8f, 1.2f);
+            float fluctuation = Random.Range(0.85f, 1.15f);
             energyLoss *= fluctuation;
 
             _energy -= energyLoss;
             _energy = Mathf.Max(0f, _energy);
             _totalEnergyDeposited += energyLoss;
 
-            _remainingRange = ElectronPhysics.CalculateRemainingRange(_energy);
-
             _trajectoryPositions.Add(_position);
             _trajectoryEnergies.Add(_energy);
-            // Track lateral positions for distribution rewards
             _lateralPositionsY.Add(_position.y);
             _lateralPositionsZ.Add(_position.z);
         }
 
+        /// <summary>
+        /// V6: Track which angular sectors have been explored.
+        /// Encourages full 360° coverage like Geant4 "dandelion".
+        /// </summary>
+        private void UpdateAngularSector(Vector3 direction)
+        {
+            // Calculate angle in Y-Z plane (perpendicular to beam axis X)
+            float angle = Mathf.Atan2(direction.z, direction.y) * Mathf.Rad2Deg;
+            if (angle < 0) angle += 360f;
+
+            int sector = (int)(angle / (360f / AngularSectors)) % AngularSectors;
+            _angularSectorHits[sector]++;
+
+            // Update coverage metric
+            int exploredSectors = 0;
+            for (int i = 0; i < AngularSectors; i++)
+            {
+                if (_angularSectorHits[i] > 0) exploredSectors++;
+            }
+            _totalAngularCoverage = (float)exploredSectors / AngularSectors;
+        }
+
         // ====================================================================
-        // STEP REWARD (with anti-straight-line and anti-spiral)
+        // STEP REWARD - V6 with Angular Diversity
         // ====================================================================
 
         private float CalculateStepReward()
         {
             float reward = 0f;
-
-            // 1. SCATTERING BOUNDS CHECK
             float lastScatterAngle = _scatteringAngles[_scatteringAngles.Count - 1];
-            float expectedRMS = ElectronPhysics.CalculateRMSScatteringAngle(_previousEnergy, MaxStepSize) * Mathf.Rad2Deg;
-            expectedRMS = Mathf.Max(3f, expectedRMS);
+            float energyFraction = _energy / _initialEnergy;
 
-            float maxAllowed = expectedRMS * 4f;
-            float minExpected = expectedRMS * 0.3f;
+            float currentDepth = _position.x - ElectronPhysics.PHANTOM_ENTRY_X;
+            float previousDepth = _previousPosition.x - ElectronPhysics.PHANTOM_ENTRY_X;
+            float depthDelta = currentDepth - previousDepth;
 
-            if (lastScatterAngle >= minExpected && lastScatterAngle <= maxAllowed)
+            // ================================================================
+            // PHASE 1: INITIAL PENETRATION (energy > 75%)
+            // ================================================================
+            if (energyFraction > InitialStraightEnergyThreshold)
             {
-                reward += W_ScatteringBounds * 0.1f;
+                if (depthDelta > 0)
+                {
+                    reward += W_InitialStraight * depthDelta * 35f;
+                }
+                else if (depthDelta < -0.001f)
+                {
+                    reward -= W_InitialStraight * Mathf.Abs(depthDelta) * 50f;
+                }
+
+                if (lastScatterAngle < 2f)
+                {
+                    reward += W_InitialStraight * 0.3f;
+                }
+                else if (lastScatterAngle < 4f)
+                {
+                    reward += W_InitialStraight * 0.15f;
+                }
+                else if (lastScatterAngle > 8f)
+                {
+                    float excess = (lastScatterAngle - 8f) / 12f;
+                    reward -= W_InitialStraight * excess * 0.5f;
+                }
             }
-            else if (lastScatterAngle < minExpected)
+            // ================================================================
+            // PHASE 2: TRANSITION (energy 40-75%)
+            // ================================================================
+            else if (energyFraction > 0.4f)
             {
-                float straightPenalty = (minExpected - lastScatterAngle) / minExpected;
-                reward -= W_ScatteringBounds * straightPenalty * 0.3f;
+                if (depthDelta > 0)
+                {
+                    reward += W_ForwardProgress * depthDelta * 8f;
+                }
+                else if (depthDelta < -0.002f)
+                {
+                    reward -= W_BackscatterPenalty * Mathf.Abs(depthDelta) * 4f;
+                }
+
+                float maxAllowedScatter = Mathf.Lerp(MaxScatterAnglePerStep, 8f, energyFraction);
+                if (lastScatterAngle <= maxAllowedScatter)
+                {
+                    reward += W_ScatteringBounds * 0.03f;
+                }
+
+                // V6: Start rewarding angular diversity
+                reward += CalculateAngularDiversityReward() * 0.3f;
             }
+            // ================================================================
+            // PHASE 3: DEEP SCATTERING (energy < 40%)
+            // ================================================================
             else
             {
-                float excessAngle = (lastScatterAngle - maxAllowed) / maxAllowed;
-                reward -= W_ScatteringBounds * excessAngle * 0.2f;
+                if (depthDelta > 0)
+                {
+                    reward += W_ForwardProgress * depthDelta * 3f;
+                }
+
+                if (lastScatterAngle >= MinAnglePerStep && lastScatterAngle <= MaxScatterAnglePerStep)
+                {
+                    reward += W_ScatteringVariance * 0.03f;
+                }
+
+                // V6: Full angular diversity reward at low energy
+                reward += CalculateAngularDiversityReward();
+
+                // V6: Outward arc reward
+                reward += CalculateOutwardArcReward();
+
+                // Reward lateral spread at low energy
+                float lateral = Mathf.Sqrt(_position.y * _position.y + _position.z * _position.z);
+                float depthFraction = currentDepth / (2f * ElectronPhysics.PHANTOM_HALF_SIZE);
+                float expectedLateral = TargetLateralSpread * depthFraction;
+
+                if (lateral >= expectedLateral * 0.3f)
+                {
+                    reward += W_LateralSpread * 0.02f;
+                }
             }
 
-            // 2. ANTI-SPIRAL CHECK (every 10 steps)
-            if (_currentStep > 0 && _currentStep % 10 == 0 && _scatteringAxes.Count >= 10)
+            // ================================================================
+            // CONTINUOUS REWARDS
+            // ================================================================
+            if (currentDepth > 0)
+            {
+                float depthBonus = currentDepth / (2f * ElectronPhysics.PHANTOM_HALF_SIZE);
+                reward += W_ForwardProgress * 0.005f * depthBonus;
+            }
+
+            // Anti-spiral
+            if (_currentStep > 0 && _currentStep % 5 == 0 && _scatteringAxes.Count >= 5)
             {
                 Vector3 recentAxisSum = Vector3.zero;
-                int checkSteps = Mathf.Min(10, _scatteringAxes.Count);
+                int checkSteps = Mathf.Min(5, _scatteringAxes.Count);
 
                 for (int i = _scatteringAxes.Count - checkSteps; i < _scatteringAxes.Count; i++)
                 {
-                    recentAxisSum += _scatteringAxes[i].normalized;
+                    if (_scatteringAxes[i].magnitude > 0.001f)
+                    {
+                        recentAxisSum += _scatteringAxes[i].normalized;
+                    }
                 }
 
                 float spiralIndicator = recentAxisSum.magnitude / checkSteps;
-
                 if (spiralIndicator > 0.5f)
                 {
-                    reward -= W_AntiSpiral * (spiralIndicator - 0.5f) * 2f;
-                }
-                else
-                {
-                    reward += W_AntiSpiral * 0.05f;
+                    reward -= W_AntiSpiral * (spiralIndicator - 0.5f) * 0.1f;
                 }
             }
 
-            // 3. SCATTERING VARIANCE CHECK (every 20 steps)
-            if (_currentStep > 0 && _currentStep % 20 == 0 && _scatteringAngles.Count >= 20)
-            {
-                float sum = 0f;
-                int lookback = 20;
-                for (int i = _scatteringAngles.Count - lookback; i < _scatteringAngles.Count; i++)
-                {
-                    sum += _scatteringAngles[i];
-                }
-                float mean = sum / lookback;
-
-                float variance = 0f;
-                for (int i = _scatteringAngles.Count - lookback; i < _scatteringAngles.Count; i++)
-                {
-                    float diff = _scatteringAngles[i] - mean;
-                    variance += diff * diff;
-                }
-                float stdDev = Mathf.Sqrt(variance / lookback);
-
-                if (stdDev < MinScatteringStdDev)
-                {
-                    float consistencyPenalty = (MinScatteringStdDev - stdDev) / MinScatteringStdDev;
-                    reward -= W_ScatteringVariance * consistencyPenalty * 0.5f;
-                }
-                else
-                {
-                    reward += W_ScatteringVariance * 0.1f;
-                }
-            }
-
-            // 4. RANGE CONSISTENCY
-            float pathVsRangeFraction = _cumulativePathLength / _expectedCSDARange;
-            float energyFraction = _energy / _initialEnergy;
-            float expectedEnergyRemaining = 1f - pathVsRangeFraction;
-            float energyConsistency = 1f - Mathf.Abs(energyFraction - Mathf.Max(0f, expectedEnergyRemaining));
-
-            if (energyConsistency > 0.8f)
-            {
-                reward += W_Range * 0.05f;
-            }
-            else if (energyConsistency < 0.5f)
-            {
-                reward -= W_Range * (0.5f - energyConsistency) * 0.2f;
-            }
-
-            // 5. SURVIVAL BONUS
             reward += SurvivalBonus;
 
-            // ================================================================
-            // 6. NEW: NORMAL DISTRIBUTION LATERAL REWARDS
-            // ================================================================
-            if (UseNormalDistributionRewards)
+            return reward;
+        }
+
+        /// <summary>
+        /// V6: Reward for exploring different angular sectors.
+        /// Prevents mode collapse where all trajectories go same direction.
+        /// </summary>
+        private float CalculateAngularDiversityReward()
+        {
+            float reward = 0f;
+
+            // Check if we just hit a new sector
+            float angle = Mathf.Atan2(_momentumDirection.z, _momentumDirection.y) * Mathf.Rad2Deg;
+            if (angle < 0) angle += 360f;
+            int currentSector = (int)(angle / (360f / AngularSectors)) % AngularSectors;
+
+            // Big bonus for first hit in any sector
+            if (_angularSectorHits[currentSector] == 1)
             {
-                // Calculate depth fraction (how far into phantom)
-                float depthFraction = (_position.x - ElectronPhysics.PHANTOM_ENTRY_X) /
-                                     (2f * ElectronPhysics.PHANTOM_HALF_SIZE);
-                depthFraction = Mathf.Clamp01(depthFraction);
+                reward += UnexploredSectorBonus;
+            }
 
-                // a) Step-level lateral change reward
-                if (_lateralPositionsY.Count >= 2)
+            // Continuous bonus for overall coverage
+            reward += W_AngularDiversity * _totalAngularCoverage * 0.01f;
+
+            // Penalty if too concentrated in one sector
+            int maxHits = 0;
+            int totalHits = 0;
+            for (int i = 0; i < AngularSectors; i++)
+            {
+                maxHits = Mathf.Max(maxHits, _angularSectorHits[i]);
+                totalHits += _angularSectorHits[i];
+            }
+
+            if (totalHits > 10)
+            {
+                float concentration = (float)maxHits / totalHits;
+                if (concentration > 0.5f)  // More than 50% in one sector
                 {
-                    float deltaY = _position.y - _previousLateralY;
-                    float deltaZ = _position.z - _previousLateralZ;
-
-                    float stepSize = Vector3.Distance(_position, _previousPosition);
-
-                    // Each step's lateral change should follow Highland distribution
-                    float stepLateralRewardY = NormalDistributionRewards.CalculateStepLateralReward(
-                        deltaY, stepSize, _previousEnergy, W_StepLateral * 0.5f);
-                    float stepLateralRewardZ = NormalDistributionRewards.CalculateStepLateralReward(
-                        deltaZ, stepSize, _previousEnergy, W_StepLateral * 0.5f);
-
-                    reward += (stepLateralRewardY + stepLateralRewardZ) * 0.1f;
+                    reward -= W_AngularDiversity * (concentration - 0.5f) * 0.1f;
                 }
+            }
 
-                // b) Overall lateral position reward (encourage normal distribution)
-                // Check every 10 steps to avoid excessive computation
-                if (_currentStep > 0 && _currentStep % 10 == 0)
+            return reward;
+        }
+
+        /// <summary>
+        /// V6: Reward for scattering OUTWARD from center axis.
+        /// Creates the characteristic Geant4 "arc" shape.
+        /// </summary>
+        private float CalculateOutwardArcReward()
+        {
+            float reward = 0f;
+
+            // Current lateral position (distance from X axis)
+            float currentLateral = Mathf.Sqrt(_position.y * _position.y + _position.z * _position.z);
+            float previousLateral = Mathf.Sqrt(_previousPosition.y * _previousPosition.y +
+                                               _previousPosition.z * _previousPosition.z);
+
+            float lateralDelta = currentLateral - previousLateral;
+
+            // Reward moving OUTWARD at low energy
+            float energyFraction = _energy / _initialEnergy;
+            if (energyFraction < 0.5f && lateralDelta > 0)
+            {
+                reward += W_OutwardScatter * lateralDelta * 5f;
+            }
+
+            // Check if scattering direction is outward (away from center)
+            Vector2 lateralPos = new Vector2(_position.y, _position.z);
+            Vector2 lateralDir = new Vector2(_momentumDirection.y, _momentumDirection.z);
+
+            if (lateralPos.magnitude > 0.1f && lateralDir.magnitude > 0.01f)
+            {
+                float dotProduct = Vector2.Dot(lateralPos.normalized, lateralDir.normalized);
+                if (dotProduct > 0.3f)  // Moving outward
                 {
-                    float lateralReward = NormalDistributionRewards.CalculateLateralDeviationReward(
-                        _position.y, _position.z, depthFraction, W_LateralDistribution * 0.1f);
-                    reward += lateralReward;
+                    reward += W_OutwardScatter * dotProduct * 0.05f;
                 }
-
-                // c) Scattering angle reward using ±2σ/±3σ bounds
-                float scatterReward = NormalDistributionRewards.CalculateScatteringAngleReward(
-                    lastScatterAngle, _previousEnergy, MaxStepSize, W_MeanScattering * 0.05f);
-                reward += scatterReward;
-
-                // Update previous lateral positions
-                _previousLateralY = _position.y;
-                _previousLateralZ = _position.z;
             }
 
             return reward;
@@ -802,7 +832,7 @@ namespace Agents
 
                 if (Mode == TrainingMode.Geant4Statistical && _geant4DataValid)
                 {
-                    geant4Reward = CalculateGeant4StatisticalReward();
+                    geant4Reward = CalculateGeant4ComparisonReward();
                 }
             }
 
@@ -822,44 +852,78 @@ namespace Agents
         {
             float reward = 0f;
 
-            // 1. PATH LENGTH vs CSDA
-            float pathRatio = _cumulativePathLength / _expectedCSDARange;
-            float expectedDetour = ElectronPhysics.GetExpectedDetourFactor(_initialEnergy);
-            float idealPathLength = _expectedCSDARange * expectedDetour;
-            float pathError = Mathf.Abs(_cumulativePathLength - idealPathLength) / idealPathLength;
-
-            if (pathError < 0.15f)
-            {
-                reward += W_TotalRange * (1f - pathError);
-            }
-            else if (pathError < 0.3f)
-            {
-                reward += W_TotalRange * 0.5f * (1f - pathError);
-            }
-            else
-            {
-                reward -= W_TotalRange * pathError * 0.3f;
-            }
-
-            // 2. ENERGY DEPLETION
             float remainingEnergyFraction = _energy / _initialEnergy;
             if (remainingEnergyFraction < 0.05f)
             {
-                reward += W_EnergyDepletion * (1f - remainingEnergyFraction);
+                reward += W_EnergyDepletion;
             }
             else if (remainingEnergyFraction < 0.2f)
             {
                 reward += W_EnergyDepletion * 0.5f;
             }
-            else
+
+            // X-axis penetration depth
+            float finalDepthX = _position.x - ElectronPhysics.PHANTOM_ENTRY_X;
+            float maxDepth = 2f * ElectronPhysics.PHANTOM_HALF_SIZE;
+            float depthFraction = finalDepthX / maxDepth;
+
+            if (depthFraction > 0.6f)
             {
-                reward -= W_EnergyDepletion * remainingEnergyFraction;
+                reward += W_ForwardProgress * depthFraction * 5f;
+            }
+            else if (depthFraction > 0.4f)
+            {
+                reward += W_ForwardProgress * depthFraction * 3f;
+            }
+            else if (depthFraction > 0.25f)
+            {
+                reward += W_ForwardProgress * depthFraction * 1.5f;
+            }
+            else if (depthFraction < 0.15f)
+            {
+                float shortness = (0.15f - depthFraction) / 0.15f;
+                reward -= W_ForwardProgress * shortness * 3f;
             }
 
-            // 3. OVERALL SCATTERING QUALITY
+            float stepsUsedFraction = (float)_currentStep / MaxSteps;
+            if (stepsUsedFraction < 0.3f && depthFraction < 0.3f)
+            {
+                reward -= W_ForwardProgress * 2f;
+            }
+
+            // Initial straight section quality
+            if (_scatteringAngles.Count > 20)
+            {
+                int initialSteps = _scatteringAngles.Count / 4;
+                float initialSum = 0f;
+                for (int i = 0; i < initialSteps; i++)
+                {
+                    initialSum += _scatteringAngles[i];
+                }
+                float initialMeanAngle = initialSum / initialSteps;
+
+                if (initialMeanAngle < 4f)
+                {
+                    reward += W_InitialStraight * 1.5f;
+                }
+                else if (initialMeanAngle < 6f)
+                {
+                    reward += W_InitialStraight * 0.8f;
+                }
+                else if (initialMeanAngle < 8f)
+                {
+                    reward += W_InitialStraight * 0.3f;
+                }
+                else
+                {
+                    float excess = (initialMeanAngle - 8f) / 10f;
+                    reward -= W_InitialStraight * excess * 1.0f;
+                }
+            }
+
+            // Final scattering quality
             if (_scatteringAngles.Count > 10)
             {
-                // Calculate overall statistics
                 float sum = 0f;
                 foreach (float a in _scatteringAngles) sum += a;
                 float meanAngle = sum / _scatteringAngles.Count;
@@ -872,54 +936,68 @@ namespace Agents
                 }
                 float stdDev = Mathf.Sqrt(variance / _scatteringAngles.Count);
 
-                // Check mean scattering
-                float expectedMean = ElectronPhysics.CalculateRMSScatteringAngle(_initialEnergy / 2f, MaxStepSize) * Mathf.Rad2Deg;
-                expectedMean = Mathf.Max(3f, expectedMean);
-
-                float meanError = Mathf.Abs(meanAngle - expectedMean) / expectedMean;
-                if (meanError < 0.5f)
-                {
-                    reward += W_MeanScattering * (1f - meanError);
-                }
-                else
-                {
-                    reward -= W_MeanScattering * meanError * 0.3f;
-                }
-
-                // Check variance (must have variance!)
-                if (stdDev < MinScatteringStdDev)
-                {
-                    // TOO STRAIGHT! Big penalty!
-                    reward -= W_ScatteringVariance * 2f;
-                    _straightLineCount++;
-
-                    if (VerboseLogging)
-                    {
-                        Debug.LogWarning($"[Agent #{AgentIndex}] TOO STRAIGHT! StdDev={stdDev:F2}° < {MinScatteringStdDev}°");
-                    }
-                }
-                else
+                if (stdDev >= MinScatteringStdDev)
                 {
                     reward += W_ScatteringVariance * 0.5f;
-                }
-
-                // Check spiral (cumulative angular momentum)
-                float spiralMagnitude = _cumulativeAngularMomentum.magnitude / _scatteringAngles.Count;
-                if (spiralMagnitude > 0.3f)
-                {
-                    // SPIRALING! Penalty
-                    reward -= W_AntiSpiral * spiralMagnitude;
+                    _goodScatteringCount++;
                 }
                 else
+                {
+                    _straightLineCount++;
+                }
+
+                float spiralMagnitude = _cumulativeAngularMomentum.magnitude / _scatteringAngles.Count;
+                if (spiralMagnitude < 0.3f)
                 {
                     reward += W_AntiSpiral * 0.3f;
                 }
+                else
+                {
+                    reward -= W_AntiSpiral * spiralMagnitude;
+                }
             }
 
-            // 4. COMPLETION BONUS (only if proper physics!)
-            if (_energy <= 0.01f && pathRatio > 0.8f && pathRatio < 1.5f)
+            // Final lateral spread
+            float finalLateral = Mathf.Sqrt(_position.y * _position.y + _position.z * _position.z);
+            float lateralError = Mathf.Abs(finalLateral - TargetLateralSpread) / TargetLateralSpread;
+
+            if (lateralError < 0.5f)
             {
-                // Calculate final scattering quality
+                reward += W_LateralSpread * (1f - lateralError);
+            }
+            else if (finalLateral < TargetLateralSpread * 0.2f)
+            {
+                reward -= W_LateralSpread * 0.5f;
+            }
+
+            // ================================================================
+            // V6: ANGULAR COVERAGE BONUS (critical for "dandelion" shape!)
+            // ================================================================
+            reward += W_AngularDiversity * _totalAngularCoverage * 2f;
+
+            // Bonus for exploring many sectors
+            int exploredSectors = 0;
+            for (int i = 0; i < AngularSectors; i++)
+            {
+                if (_angularSectorHits[i] > 0) exploredSectors++;
+            }
+
+            if (exploredSectors >= AngularSectors * 0.75f)  // 75%+ coverage
+            {
+                reward += W_AngularDiversity * 1.5f;
+            }
+            else if (exploredSectors >= AngularSectors * 0.5f)  // 50%+ coverage
+            {
+                reward += W_AngularDiversity * 0.5f;
+            }
+            else if (exploredSectors <= AngularSectors * 0.25f)  // Poor coverage
+            {
+                reward -= W_AngularDiversity * 0.5f;
+            }
+
+            // Big bonus
+            if (_scatteringAngles.Count > 20)
+            {
                 float sum = 0f;
                 foreach (float a in _scatteringAngles) sum += a;
                 float meanAngle = sum / _scatteringAngles.Count;
@@ -931,110 +1009,73 @@ namespace Agents
                     variance += diff * diff;
                 }
                 float stdDev = Mathf.Sqrt(variance / _scatteringAngles.Count);
-
                 float spiralMag = _cumulativeAngularMomentum.magnitude / _scatteringAngles.Count;
 
-                // Only bonus if good scattering behavior
-                if (stdDev >= MinScatteringStdDev && spiralMag < 0.3f)
+                int initialSteps = _scatteringAngles.Count / 5;
+                float initialSum = 0f;
+                for (int i = 0; i < initialSteps; i++)
                 {
-                    reward += 50f;
+                    initialSum += _scatteringAngles[i];
                 }
-            }
+                float initialMeanAngle = initialSum / initialSteps;
 
-            // ================================================================
-            // NEW: Distribution quality reward at episode end
-            // ================================================================
-            if (UseNormalDistributionRewards && _lateralPositionsY.Count > 10)
-            {
-                // Convert lists to arrays for reward calculation
-                float[] lateralY = _lateralPositionsY.ToArray();
-                float[] lateralZ = _lateralPositionsZ.ToArray();
+                bool goodVariance = stdDev >= MinScatteringStdDev;
+                bool notSpiral = spiralMag < 0.3f;
+                bool goodLateral = finalLateral >= TargetLateralSpread * 0.2f;
+                bool goodDepth = depthFraction >= 0.3f;
+                bool excellentDepth = depthFraction >= 0.5f;
+                bool goodInitialStraight = initialMeanAngle < 5f;
+                bool goodAngularCoverage = _totalAngularCoverage >= 0.5f;  // V6
 
-                // Reward for Y distribution quality
-                float distQualityY = NormalDistributionRewards.CalculateDistributionQualityReward(
-                    lateralY, W_LateralDistribution * 0.3f);
-
-                // Reward for Z distribution quality  
-                float distQualityZ = NormalDistributionRewards.CalculateDistributionQualityReward(
-                    lateralZ, W_LateralDistribution * 0.3f);
-
-                reward += distQualityY + distQualityZ;
-
-                // Bonus for symmetric distribution (Y and Z should have similar spread)
-                float sumY = 0f, sumZ = 0f;
-                for (int i = 0; i < lateralY.Length; i++)
+                if (goodVariance && notSpiral && goodLateral && excellentDepth &&
+                    goodInitialStraight && goodAngularCoverage)
                 {
-                    sumY += lateralY[i] * lateralY[i];
-                    sumZ += lateralZ[i] * lateralZ[i];
+                    reward += 300f;  // V6: Even bigger bonus for full Geant4 match!
                 }
-                float rmsY = Mathf.Sqrt(sumY / lateralY.Length);
-                float rmsZ = Mathf.Sqrt(sumZ / lateralZ.Length);
-
-                float symmetryError = Mathf.Abs(rmsY - rmsZ) / Mathf.Max(rmsY, rmsZ, 0.01f);
-                if (symmetryError < 0.2f)
+                else if (goodDepth && goodInitialStraight && goodVariance && goodAngularCoverage)
                 {
-                    reward += W_LateralDistribution * 0.2f; // Bonus for symmetry
+                    reward += 150f;
+                }
+                else if (goodDepth && goodInitialStraight && goodAngularCoverage)
+                {
+                    reward += 80f;
+                }
+                else if (goodDepth && goodInitialStraight)
+                {
+                    reward += 40f;
+                }
+                else if (goodDepth)
+                {
+                    reward += 20f;
                 }
             }
 
             return reward;
         }
 
-        private float CalculateGeant4StatisticalReward()
+        private float CalculateGeant4ComparisonReward()
         {
             if (!_geant4DataValid) return 0f;
 
             float reward = 0f;
-
-            float agentFinalDepth = _position.x - ElectronPhysics.PHANTOM_ENTRY_X;
             float agentLateralSpread = Mathf.Sqrt(_position.y * _position.y + _position.z * _position.z);
 
-            // 1. PATH LENGTH
-            if (_geant4PathLength > 0.1f)
+            if (_geant4LateralSpread > 0.01f)
             {
-                float pathError = Mathf.Abs(_cumulativePathLength - _geant4PathLength) / _geant4PathLength;
-                if (pathError < StatisticalTolerance)
+                float lateralError = Mathf.Abs(agentLateralSpread - _geant4LateralSpread) / _geant4LateralSpread;
+
+                if (lateralError < StatisticalTolerance)
                 {
-                    reward += W_Geant4Path * (1f - pathError / StatisticalTolerance);
+                    reward += W_Geant4Match * 0.4f * (1f - lateralError / StatisticalTolerance);
                 }
-                else if (pathError < StatisticalTolerance * 2f)
+                else if (agentLateralSpread < _geant4LateralSpread * 0.3f)
                 {
-                    reward += W_Geant4Path * 0.3f;
-                }
-                else
-                {
-                    reward -= W_Geant4Path * 0.2f;
+                    reward -= W_Geant4Match * 0.3f;
                 }
             }
 
-            // 2. FINAL DEPTH
-            if (_geant4FinalDepth > 0.1f)
-            {
-                float depthError = Mathf.Abs(agentFinalDepth - _geant4FinalDepth) / _geant4FinalDepth;
-                if (depthError < StatisticalTolerance)
-                {
-                    reward += W_Geant4Depth * (1f - depthError / StatisticalTolerance);
-                }
-                else
-                {
-                    reward -= W_Geant4Depth * 0.1f;
-                }
-            }
-
-            // 3. LATERAL SPREAD
-            float lateralTolerance = StatisticalTolerance * 1.5f;
-            float maxLateral = Mathf.Max(_geant4LateralSpread, agentLateralSpread, 0.1f);
-            float lateralError = Mathf.Abs(agentLateralSpread - _geant4LateralSpread) / maxLateral;
-
-            if (lateralError < lateralTolerance)
-            {
-                reward += W_Geant4Lateral * (1f - lateralError / lateralTolerance);
-            }
-
-            // 4. SCATTERING DISTRIBUTION MATCH (NEW - critical!)
             if (_scatteringAngles.Count > 10 && _geant4MeanScatterAngle > 0.1f)
             {
-                // Calculate agent's scattering stats
                 float sum = 0f;
                 foreach (float a in _scatteringAngles) sum += a;
                 float agentMean = sum / _scatteringAngles.Count;
@@ -1047,21 +1088,28 @@ namespace Agents
                 }
                 float agentStdDev = Mathf.Sqrt(variance / _scatteringAngles.Count);
 
-                // Compare means
                 float meanError = Mathf.Abs(agentMean - _geant4MeanScatterAngle) / _geant4MeanScatterAngle;
-                if (meanError < 0.3f)
+                if (meanError < StatisticalTolerance)
                 {
-                    reward += W_Geant4Scattering * 0.5f * (1f - meanError / 0.3f);
+                    reward += W_Geant4Match * 0.3f * (1f - meanError / StatisticalTolerance);
                 }
 
-                // Compare std devs
                 if (_geant4ScatterStdDev > 0.1f)
                 {
                     float stdError = Mathf.Abs(agentStdDev - _geant4ScatterStdDev) / _geant4ScatterStdDev;
-                    if (stdError < 0.5f)
+                    if (stdError < StatisticalTolerance * 1.5f)
                     {
-                        reward += W_Geant4Scattering * 0.5f * (1f - stdError / 0.5f);
+                        reward += W_Geant4Match * 0.3f * (1f - stdError / (StatisticalTolerance * 1.5f));
                     }
+                }
+            }
+
+            if (_geant4PathLength > 0.1f)
+            {
+                float pathError = Mathf.Abs(_cumulativePathLength - _geant4PathLength) / _geant4PathLength;
+                if (pathError < StatisticalTolerance)
+                {
+                    reward += W_Geant4Match * 0.2f * (1f - pathError / StatisticalTolerance);
                 }
             }
 
@@ -1079,16 +1127,15 @@ namespace Agents
 
         private void LogStepInfo(float reward)
         {
-            float spiralMag = _cumulativeAngularMomentum.magnitude / Mathf.Max(1f, _currentStep);
+            float lastAngle = _scatteringAngles.Count > 0 ? _scatteringAngles[_scatteringAngles.Count - 1] : 0f;
+            float lateral = Mathf.Sqrt(_position.y * _position.y + _position.z * _position.z);
             Debug.Log($"[Agent #{AgentIndex} Step {_currentStep}] " +
-                     $"E={_energy:F2}MeV, Spiral={spiralMag:F3}, R={reward:F2}");
+                     $"E={_energy:F2}MeV, Angle={lastAngle:F1}°, Lateral={lateral:F3}cm, " +
+                     $"Coverage={_totalAngularCoverage:P0}, R={reward:F2}");
         }
 
-        private void LogEpisodeSummary(float physicsReward, float geant4Reward)
+        private void LogEpisodeSummary(float trajectoryReward, float geant4Reward)
         {
-            float pathRatio = _cumulativePathLength / _expectedCSDARange;
-
-            // Calculate scattering stats
             float meanAngle = 0f;
             float stdDev = 0f;
             if (_scatteringAngles.Count > 0)
@@ -1107,12 +1154,19 @@ namespace Agents
             }
 
             float spiralMag = _cumulativeAngularMomentum.magnitude / Mathf.Max(1f, _scatteringAngles.Count);
+            float finalLateral = Mathf.Sqrt(_position.y * _position.y + _position.z * _position.z);
+
+            int exploredSectors = 0;
+            for (int i = 0; i < AngularSectors; i++)
+            {
+                if (_angularSectorHits[i] > 0) exploredSectors++;
+            }
 
             Debug.Log($"[Agent #{AgentIndex}] Episode {CompletedEpisodes}:");
-            Debug.Log($"  Path: {_cumulativePathLength:F2}cm ({pathRatio:P0} CSDA)");
-            Debug.Log($"  Scattering: mean={meanAngle:F2}°, std={stdDev:F2}°, spiral={spiralMag:F3}");
-            Debug.Log($"  Rewards: physics={physicsReward:F1}, g4={geant4Reward:F1}, total={_episodeRewardSum:F1}");
-            Debug.Log($"  Stats: exits={_boundaryExitCount}, straight={_straightLineCount}");
+            Debug.Log($"  Scattering: mean={meanAngle:F2}°, std={stdDev:F2}°");
+            Debug.Log($"  Lateral: {finalLateral:F3}cm, spiral={spiralMag:F3}");
+            Debug.Log($"  Angular: {exploredSectors}/{AngularSectors} sectors ({_totalAngularCoverage:P0})");
+            Debug.Log($"  Rewards: traj={trajectoryReward:F1}, g4={geant4Reward:F1}, total={_episodeRewardSum:F1}");
         }
 
         // ====================================================================
@@ -1125,6 +1179,8 @@ namespace Agents
         public float GetCumulativePathLength() => _cumulativePathLength;
         public bool DidExitBoundary() => _exitedBoundary;
         public int GetStraightLineCount() => _straightLineCount;
+        public int GetGoodScatteringCount() => _goodScatteringCount;
+        public float GetAngularCoverage() => _totalAngularCoverage;
 
         // ====================================================================
         // HEURISTIC
@@ -1134,14 +1190,34 @@ namespace Agents
         {
             var actions = actionsOut.ContinuousActions;
 
-            // Random but physically plausible scattering
-            float expectedAngle = ElectronPhysics.CalculateRMSScatteringAngle(_energy, MaxStepSize);
-
-            // Random direction change
-            actions[0] = 0.7f + Random.Range(-0.3f, 0.3f);
-            actions[1] = Random.Range(-0.4f, 0.4f);
-            actions[2] = Random.Range(-0.4f, 0.4f);
+            // Random exploration with bias toward forward motion
+            actions[0] = Random.Range(-0.5f, 1f);  // Slight forward bias
+            actions[1] = Random.Range(-1f, 1f);
+            actions[2] = Random.Range(-1f, 1f);
             actions[3] = Random.Range(-0.5f, 0.5f);
+        }
+
+        /// <summary>
+        /// Calculate the current angular sector (0 to AngularSectors-1) based on Y/Z position.
+        /// </summary>
+        private int GetCurrentAngularSector()
+        {
+            float angle = Mathf.Atan2(_position.z, _position.y) * Mathf.Rad2Deg;
+            if (angle < 0) angle += 360f;
+            return (int)(angle / (360f / AngularSectors)) % AngularSectors;
+        }
+
+        /// <summary>
+        /// Get angular coverage as fraction (0 to 1).
+        /// </summary>
+        public float GetAngularCoverageFraction()
+        {
+            int explored = 0;
+            for (int i = 0; i < AngularSectors; i++)
+            {
+                if (_angularSectorHits[i] > 0) explored++;
+            }
+            return (float)explored / AngularSectors;
         }
     }
 }
