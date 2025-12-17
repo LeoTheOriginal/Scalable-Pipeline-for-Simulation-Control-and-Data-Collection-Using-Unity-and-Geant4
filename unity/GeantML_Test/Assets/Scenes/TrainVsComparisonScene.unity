@@ -145,7 +145,7 @@ PrefabInstance:
     - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
       propertyPath: GlobalInferenceModel
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 5022602860645237092, guid: e9d993bd4e80a2c46b607ddb50aa843c, type: 3}
     - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
       propertyPath: ApplyGlobalSettingsOnStart
       value: 1

@@ -1,17 +1,33 @@
+# ML-Agents Training Configuration - VERSION 6 SAC
+# SOFT ACTOR-CRITIC: Built-in entropy maximization!
+#
+# WHY SAC FOR THIS PROBLEM:
+# - Automatic entropy tuning (no manual beta scheduling!)
+# - Maximum entropy framework = natural exploration
+# - Off-policy = more sample efficient
+# - Excellent for continuous action spaces
+#
+# Usage:
+#   mlagents-learn electron_sac_v6.yaml --run-id=v6_sac --force
+#
+
 behaviors:
+
   ElectronPhysics:
-    trainer_type: sac  # ZMIANA: Algorytm SAC
-    
+    trainer_type: sac
+
     hyperparameters:
+      batch_size: 256
+      buffer_size: 500000
+      buffer_init_steps: 10000
+
       learning_rate: 3.0e-4
       learning_rate_schedule: constant
-      buffer_size: 50000        # SAC wymaga dużego bufora (Replay Buffer)
-      buffer_init_steps: 1000   # Kroki na wypełnienie bufora przed nauką
-      batch_size: 256           # Zazwyczaj mniejszy batch niż w PPO
-      tau: 0.005                # Współczynnik aktualizacji (Soft Update)
-      steps_per_update: 20.0    # Ile razy trenować sieć na krok symulacji
-      save_replay_buffer: true
-      init_entcoef: 0.1         # Entropia (eksploracja)
+
+      tau: 0.005
+      init_entcoef: 0.5
+      steps_per_update: 10
+      save_replay_buffer: false
 
     network_settings:
       normalize: true
@@ -21,13 +37,46 @@ behaviors:
 
     reward_signals:
       extrinsic:
-        gamma: 0.995
+        gamma: 0.99
         strength: 1.0
 
-    max_steps: 2000000          # SAC często zbiega szybciej (w sensie liczby kroków)
-    time_horizon: 64            # Krótszy horyzont dla SAC
-    summary_freq: 10000
-    keep_checkpoints: 5
+      curiosity:
+        gamma: 0.99
+        strength: 0.05
+        network_settings:
+          normalize: true
+          hidden_units: 128
+        learning_rate: 3.0e-4
+
+    max_steps: 2000000
+    time_horizon: 256
+    summary_freq: 5000
+
+    keep_checkpoints: 30
     checkpoint_interval: 50000
 
-#    mlagents-learn ..\Configs\electron_sac.yaml --run-id=sac_test_v1 --force --time-scale=10
+  ElectronPhysics_Inference:
+    trainer_type: sac
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 3
+    max_steps: 0
+    time_horizon: 256
+
+engine_settings:
+  width: 84
+  height: 84
+  quality_level: 1
+  time_scale: 20
+  target_frame_rate: -1
+  capture_frame_rate: 60
+
+checkpoint_settings:
+  run_id: v6_sac
+  initialize_from: null
+  load_model: false
+  resume: false
+  force: false
+  train_model: true
+  inference: false

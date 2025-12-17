@@ -90,8 +90,7 @@
               "RelativeToolTip": "Assets\\Scripts\\Agents\\AgentFarmManager.cs",
               "ViewState": "AgIAAKwBAAAAAAAAAAAAANgBAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-08T21:05:47.072Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-08T21:05:47.072Z"
             },
             {
               "$type": "Document",
@@ -127,8 +126,7 @@
               "RelativeToolTip": "Assets\\Scripts\\Visualization\\TrajectoryVisualizer.cs",
               "ViewState": "AgIAAEEBAAAAAAAAAAAAAEEBAAAaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-02T01:47:54.368Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-02T01:47:54.368Z"
             },
             {
               "$type": "Document",
@@ -138,7 +136,7 @@
               "RelativeDocumentMoniker": "Assets\\Scripts\\Agents\\ElectronAgentPhysics.cs",
               "ToolTip": "C:\\Thesis\\unity\\GeantML_Test\\Assets\\Scripts\\Agents\\ElectronAgentPhysics.cs",
               "RelativeToolTip": "Assets\\Scripts\\Agents\\ElectronAgentPhysics.cs",
-              "ViewState": "AgIAACUEAAAAAAAAAAAAAGAEAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAGcEAAAAAAAAAAAAAKgEAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-24T22:35:23.775Z",
               "EditorCaption": ""
