@@ -145,7 +145,7 @@ PrefabInstance:
     - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
       propertyPath: GlobalInferenceModel
       value: 
-      objectReference: {fileID: 5022602860645237092, guid: e9d993bd4e80a2c46b607ddb50aa843c, type: 3}
+      objectReference: {fileID: 5022602860645237092, guid: e89d80003e49afa469441442ab5eefcc, type: 3}
     - target: {fileID: 3243599272435609714, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
       propertyPath: ApplyGlobalSettingsOnStart
       value: 1
@@ -189,6 +189,26 @@ PrefabInstance:
     - target: {fileID: 3850690641384838984, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910511360385614805, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: AgentColors.Array.size
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910511360385614805, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: AgentColors.Array.data[6].a
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910511360385614805, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: AgentColors.Array.data[6].b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910511360385614805, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: AgentColors.Array.data[6].g
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7910511360385614805, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+      propertyPath: AgentColors.Array.data[6].r
+      value: 0.6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -381,6 +401,58 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &872409045
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 872409047}
+  - component: {fileID: 872409046}
+  m_Layer: 0
+  m_Name: PerformanceBenchmark
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &872409046
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 872409045}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 362fcc6b3adab6c47847f71070e8c55a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  NumBenchmarkRuns: 100
+  MaxStepsPerTrajectory: 500
+  TargetStepsForComparison: 50
+  MLAgent: {fileID: 2075772103}
+  ExportToFile: 1
+  OutputFileName: performance_benchmark.json
+  RunOnStart: 0
+  VerboseLogging: 1
+--- !u!4 &872409047
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 872409045}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1864801975
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -450,11 +522,23 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f0db7888fe7d70041b20c82136c8bc02, type: 3}
+--- !u!114 &2075772103 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1774817827521924076, guid: 7b8fa08c5eafe044b840bcb91d3589bb, type: 3}
+  m_PrefabInstance: {fileID: 355373714}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbd05d88d24d9c746bf11f86ac5559b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 365967856}
   - {fileID: 843636391}
+  - {fileID: 872409047}
   - {fileID: 1864801975}
   - {fileID: 355373714}

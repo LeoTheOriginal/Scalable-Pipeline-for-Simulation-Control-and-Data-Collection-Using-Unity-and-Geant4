@@ -5,6 +5,7 @@
 #include "ActionInitialization.hh"
 #include "EventAction.hh"
 #include "G4SystemOfUnits.hh"
+#include <chrono>
 #include <vector>
 #include <cmath>
 #include <fstream>
@@ -431,4 +432,118 @@ extern "C" {
         return static_cast<int>(g_BatchStats.pathLengths.size());
     }
 
+    // ========================================================================
+    // PERFORMANCE MEASUREMENT FUNCTIONS
+    // ========================================================================
+
+    /// <summary>
+    /// Measure average simulation time per trajectory over N runs.
+    /// Returns average time in milliseconds.
+    /// </summary>
+    __declspec(dllexport) float MeasureGeant4Performance(int numRuns, int maxSteps) {
+        if (!g_RunManager) return -1.0f;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int i = 0; i < numRuns; ++i) {
+            g_RunManager->BeamOn(1);
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+        // Return average time in milliseconds
+        float avgTimeMs = (duration.count() / 1000.0f) / numRuns;
+
+        return avgTimeMs;
+    }
+
+    /// <summary>
+    /// Measure detailed performance metrics for a single trajectory.
+    /// Output: [totalTimeMs, numSteps, avgStepTimeMs]
+    /// </summary>
+    __declspec(dllexport) void MeasureDetailedPerformance(float* outMetrics) {
+        if (!g_RunManager) {
+            outMetrics[0] = -1.0f;
+            outMetrics[1] = 0.0f;
+            outMetrics[2] = -1.0f;
+            return;
+        }
+
+        auto start = std::chrono::high_resolution_clock::now();
+        g_RunManager->BeamOn(1);
+        auto end = std::chrono::high_resolution_clock::now();
+
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        float totalTimeMs = duration.count() / 1000.0f;
+
+        auto eventAction = GetCurrentEventAction();
+        int numSteps = 0;
+        if (eventAction) {
+            numSteps = static_cast<int>(eventAction->GetStepRecords().size());
+        }
+
+        float avgStepTimeMs = (numSteps > 0) ? (totalTimeMs / numSteps) : 0.0f;
+
+        outMetrics[0] = totalTimeMs;          // Total time (ms)
+        outMetrics[1] = static_cast<float>(numSteps); // Number of steps
+        outMetrics[2] = avgStepTimeMs;        // Average time per step (ms)
+    }
+
+    /// <summary>
+    /// Run performance benchmark with detailed statistics.
+    /// Returns: [meanTimeMs, stdDevMs, minTimeMs, maxTimeMs, medianTimeMs, totalSteps]
+    /// Uses existing CalculateMean() function for consistency.
+    /// </summary>
+    __declspec(dllexport) void BenchmarkGeant4Performance(
+        int numRuns,
+        float* outStats,
+        int statsSize
+    ) {
+        if (!g_RunManager || statsSize < 6) return;
+
+        std::vector<double> times;  // Use double to match existing CalculateMean signature
+        times.reserve(numRuns);
+        int totalSteps = 0;
+
+        for (int i = 0; i < numRuns; ++i) {
+            auto start = std::chrono::high_resolution_clock::now();
+            g_RunManager->BeamOn(1);
+            auto end = std::chrono::high_resolution_clock::now();
+
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            times.push_back(duration.count() / 1000.0); // Convert to ms as double
+
+            auto eventAction = GetCurrentEventAction();
+            if (eventAction) {
+                totalSteps += static_cast<int>(eventAction->GetStepRecords().size());
+            }
+        }
+
+        // Calculate statistics using existing CalculateMean function
+        double mean = CalculateMean(times);
+        double stdDev = 0.0;
+
+        if (times.size() > 1) {
+            double variance = 0.0;
+            for (double t : times) {
+                double diff = t - mean;
+                variance += diff * diff;
+            }
+            stdDev = std::sqrt(variance / times.size());
+        }
+
+        std::sort(times.begin(), times.end());
+        double minTime = times.front();
+        double maxTime = times.back();
+        double medianTime = times[times.size() / 2];
+
+        // Convert to float for output (C# interop uses float arrays)
+        outStats[0] = static_cast<float>(mean);
+        outStats[1] = static_cast<float>(stdDev);
+        outStats[2] = static_cast<float>(minTime);
+        outStats[3] = static_cast<float>(maxTime);
+        outStats[4] = static_cast<float>(medianTime);
+        outStats[5] = static_cast<float>(totalSteps);
+    }
 } // extern "C"

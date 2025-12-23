@@ -101,6 +101,19 @@ namespace Core
         /// </summary>
         [DllImport(DLL_NAME)]
         public static extern int GetBatchParticleCount();
+
+        [DllImport(DLL_NAME)]
+        public static extern float MeasureGeant4Performance(int numRuns, int maxSteps);
+
+        [DllImport(DLL_NAME)]
+        public static extern void MeasureDetailedPerformance([Out] float[] outMetrics);
+
+        [DllImport(DLL_NAME)]
+        public static extern void BenchmarkGeant4Performance(
+            int numRuns,
+            [Out] float[] outStats,
+            int statsSize
+        );
     }
 
     /// <summary>

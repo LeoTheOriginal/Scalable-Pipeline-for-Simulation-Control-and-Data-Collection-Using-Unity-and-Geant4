@@ -70,6 +70,7 @@
     <Compile Include="Assets\Scripts\Core\Geant4Interface.cs" />
     <Compile Include="Assets\Scripts\Core\Geant4Manager.cs" />
     <Compile Include="Assets\Scripts\Agents\ElectronAgent.cs" />
+    <Compile Include="Assets\Scripts\Benchmarking\PerformanceBenchmark.cs" />
     <Compile Include="Assets\Scripts\Core\DataModels.cs" />
     <Compile Include="Assets\Scripts\Visualization\TrajectoryVisualizer.cs" />
   </ItemGroup>

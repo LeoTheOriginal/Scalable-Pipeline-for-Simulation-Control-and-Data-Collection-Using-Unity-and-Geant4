@@ -6,8 +6,7 @@ namespace Visualization
 {
     /// <summary>
     /// Trajectory visualizer with CUMULATIVE MODE support.
-    /// FIXED: Uses multiple LineRenderers to prevent teleport lines between episodes.
-    /// 
+    /// Uses multiple LineRenderers to prevent teleport lines between episodes.
     /// Each episode gets its own LineRenderer = perfect separation!
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
@@ -47,26 +46,14 @@ namespace Visualization
         public float LineWidth = 0.02f;
 
         [Header("Color Settings")]
-        [Tooltip("Start color (high energy)")]
-        public Color HighEnergyColor = Color.blue;
+        [Tooltip("Start color (high energy) - Green for thesis")]
+        public Color HighEnergyColor = Color.green; // Zmieniono na zielony
 
-        [Tooltip("End color (low energy)")]
-        public Color LowEnergyColor = Color.red;
+        [Tooltip("End color (low energy) - Red for thesis")]
+        public Color LowEnergyColor = Color.red;   // Zmieniono na czerwony
 
         [Tooltip("Use energy-based coloring")]
         public bool UseEnergyGradient = true;
-
-        [Header("Multi-Agent Colors (by AgentIndex)")]
-        [Tooltip("Colors for different agents in multi-agent setup")]
-        public Color[] AgentColors = new Color[]
-        {
-            new Color(0.2f, 0.6f, 1.0f, 0.6f),    // Agent 0: Blue (semi-transparent)
-            new Color(1.0f, 0.4f, 0.2f, 0.6f),    // Agent 1: Orange
-            new Color(0.2f, 1.0f, 0.4f, 0.6f),    // Agent 2: Green
-            new Color(1.0f, 0.2f, 0.8f, 0.6f),    // Agent 3: Pink
-            new Color(1.0f, 1.0f, 0.2f, 0.6f),    // Agent 4: Yellow
-            new Color(0.6f, 0.2f, 1.0f, 0.6f),    // Agent 5: Purple
-        };
 
         [Header("Manual Controls")]
         [Tooltip("Clear all trajectories (use in Inspector or via code)")]
@@ -77,27 +64,17 @@ namespace Visualization
         public bool DebugLog = false;
 
         // ====================================================================
-        // PRIVATE STATE - Multiple LineRenderers!
+        // PRIVATE STATE
         // ====================================================================
 
-        // Current episode being recorded
         private List<Vector3> _currentPoints;
         private List<float> _currentEnergies;
         private LineRenderer _currentLineRenderer;
-
-        // All completed episodes (for cumulative mode)
         private List<EpisodeSegment> _episodeSegments;
-
         private bool _isSubscribed = false;
         private int _episodeCount = 0;
         private float _timeSinceLastFade = 0f;
-
-        // Container for episode LineRenderers
         private GameObject _segmentsContainer;
-
-        // ====================================================================
-        // HELPER CLASSES
-        // ====================================================================
 
         private class EpisodeSegment
         {
@@ -105,7 +82,7 @@ namespace Visualization
             public LineRenderer LineRenderer;
             public List<Vector3> Points;
             public List<float> Energies;
-            public float Age; // For fading
+            public float Age;
 
             public EpisodeSegment(GameObject go, LineRenderer lr, List<Vector3> points, List<float> energies)
             {
@@ -127,23 +104,17 @@ namespace Visualization
             _currentEnergies = new List<float>(MaxPointsPerEpisode);
             _episodeSegments = new List<EpisodeSegment>();
 
-            // Create container for episode segments
             _segmentsContainer = new GameObject("EpisodeSegments");
             _segmentsContainer.transform.SetParent(transform);
             _segmentsContainer.transform.localPosition = Vector3.zero;
 
-            // Current LineRenderer (attached to this GameObject)
             _currentLineRenderer = GetComponent<LineRenderer>();
             SetupLineRenderer(_currentLineRenderer);
         }
 
         void Start()
         {
-            // Find agent if not assigned
-            if (Agent == null)
-            {
-                Agent = GetComponent<ElectronAgentPhysics>();
-            }
+            if (Agent == null) Agent = GetComponent<ElectronAgentPhysics>();
 
             if (Agent == null)
             {
@@ -152,29 +123,25 @@ namespace Visualization
                 return;
             }
 
-            // Subscribe to agent events
             SubscribeToAgent();
 
-            // Set agent-specific color
-            SetAgentColor();
+            // USUNIÊTO: SetAgentColor(); - to nadpisywa³o kolory!
 
             if (DebugLog)
             {
-                string mode = CumulativeMode ? "CUMULATIVE (Multi-LineRenderer)" : "RESET";
+                string mode = CumulativeMode ? "CUMULATIVE" : "RESET";
                 Debug.Log($"[TrajectoryVisualizer] Agent #{Agent.AgentIndex} - Mode: {mode}");
             }
         }
 
         void Update()
         {
-            // Manual clear check
             if (ClearAllTrajectories)
             {
                 ClearAllTrajectories = false;
                 ClearTrajectory();
             }
 
-            // Fading update
             if (CumulativeMode && FadeOldTrajectories && _episodeSegments.Count > 0)
             {
                 _timeSinceLastFade += Time.deltaTime;
@@ -185,7 +152,6 @@ namespace Visualization
                 }
             }
 
-            // Update current episode
             if (_currentPoints.Count > 0)
             {
                 UpdateCurrentLineRenderer();
@@ -195,34 +161,22 @@ namespace Visualization
         void OnDestroy()
         {
             UnsubscribeFromAgent();
-
-            // Clean up all episode segments
-            if (_segmentsContainer != null)
-            {
-                Destroy(_segmentsContainer);
-            }
+            if (_segmentsContainer != null) Destroy(_segmentsContainer);
         }
 
         void OnEnable()
         {
-            if (Agent != null && !_isSubscribed)
-            {
-                SubscribeToAgent();
-            }
+            if (Agent != null && !_isSubscribed) SubscribeToAgent();
         }
 
         void OnDisable()
         {
             UnsubscribeFromAgent();
-
-            if (!CumulativeMode)
-            {
-                ClearTrajectory();
-            }
+            if (!CumulativeMode) ClearTrajectory();
         }
 
         // ====================================================================
-        // EVENT SUBSCRIPTION
+        // EVENT SUBSCRIPTION & HANDLERS
         // ====================================================================
 
         private void SubscribeToAgent()
@@ -232,11 +186,6 @@ namespace Visualization
                 Agent.OnStepTaken += OnAgentStep;
                 Agent.OnEpisodeReset += OnAgentReset;
                 _isSubscribed = true;
-
-                if (DebugLog)
-                {
-                    Debug.Log($"[TrajectoryVisualizer] Subscribed to Agent #{Agent.AgentIndex}");
-                }
             }
         }
 
@@ -250,43 +199,25 @@ namespace Visualization
             }
         }
 
-        // ====================================================================
-        // EVENT HANDLERS
-        // ====================================================================
-
         private void OnAgentStep(Vector3 position)
         {
             if (!EnableVisualization) return;
-
             AddPointToCurrentEpisode(position, Agent.GetCurrentEnergy());
         }
 
         private void OnAgentReset()
         {
-            if (DebugLog)
-            {
-                string action = CumulativeMode ? "saving episode and starting new" : "clearing";
-                Debug.Log($"[TrajectoryVisualizer] Agent #{Agent.AgentIndex} reset - {action}");
-            }
-
             if (CumulativeMode)
             {
-                // Save current episode as separate LineRenderer
-                if (_currentPoints.Count > 1) // Need at least 2 points for a line
-                {
-                    SaveCurrentEpisodeAsSegment();
-                }
+                if (_currentPoints.Count > 1) SaveCurrentEpisodeAsSegment();
 
-                // Start fresh episode (no teleport line possible!)
                 _currentPoints.Clear();
                 _currentEnergies.Clear();
                 _currentLineRenderer.positionCount = 0;
-
                 _episodeCount++;
             }
             else
             {
-                // Reset mode: just clear current
                 ClearTrajectory();
             }
         }
@@ -299,47 +230,31 @@ namespace Visualization
         {
             if (_currentPoints.Count >= MaxPointsPerEpisode)
             {
-                // Episode too long, trim oldest point
                 _currentPoints.RemoveAt(0);
                 _currentEnergies.RemoveAt(0);
             }
-
             _currentPoints.Add(position);
             _currentEnergies.Add(energy);
         }
 
         private void SaveCurrentEpisodeAsSegment()
         {
-            // Create new GameObject for this episode
             GameObject segmentGO = new GameObject($"Episode_{_episodeCount}");
             segmentGO.transform.SetParent(_segmentsContainer.transform);
             segmentGO.transform.localPosition = Vector3.zero;
 
-            // Add LineRenderer
             LineRenderer lr = segmentGO.AddComponent<LineRenderer>();
             SetupLineRenderer(lr);
 
-            // Copy points
             lr.positionCount = _currentPoints.Count;
             lr.SetPositions(_currentPoints.ToArray());
 
-            // Set gradient
             UpdateLineRendererGradient(lr, _currentEnergies, 1f);
 
-            // Store segment
             EpisodeSegment segment = new EpisodeSegment(segmentGO, lr, _currentPoints, _currentEnergies);
             _episodeSegments.Add(segment);
 
-            // Enforce max episodes limit
-            if (_episodeSegments.Count > MaxEpisodes)
-            {
-                RemoveOldestEpisode();
-            }
-
-            if (DebugLog)
-            {
-                Debug.Log($"[TrajectoryVisualizer] Saved episode {_episodeCount} with {_currentPoints.Count} points");
-            }
+            if (_episodeSegments.Count > MaxEpisodes) RemoveOldestEpisode();
         }
 
         private void RemoveOldestEpisode()
@@ -348,11 +263,7 @@ namespace Visualization
             {
                 EpisodeSegment oldest = _episodeSegments[0];
                 _episodeSegments.RemoveAt(0);
-
-                if (oldest.GameObject != null)
-                {
-                    Destroy(oldest.GameObject);
-                }
+                if (oldest.GameObject != null) Destroy(oldest.GameObject);
             }
         }
 
@@ -369,36 +280,22 @@ namespace Visualization
             }
         }
 
-        /// <summary>
-        /// Clear all trajectory points and segments.
-        /// </summary>
         public void ClearTrajectory()
         {
-            // Clear current episode
             _currentPoints.Clear();
             _currentEnergies.Clear();
             _currentLineRenderer.positionCount = 0;
 
-            // Clear all saved episodes
             foreach (var segment in _episodeSegments)
             {
-                if (segment.GameObject != null)
-                {
-                    Destroy(segment.GameObject);
-                }
+                if (segment.GameObject != null) Destroy(segment.GameObject);
             }
             _episodeSegments.Clear();
-
             _episodeCount = 0;
-
-            if (DebugLog)
-            {
-                Debug.Log($"[TrajectoryVisualizer] All trajectories cleared for Agent #{Agent?.AgentIndex}");
-            }
         }
 
         // ====================================================================
-        // FADING (Cumulative Mode)
+        // RENDERER UPDATES
         // ====================================================================
 
         private void UpdateFading()
@@ -407,15 +304,9 @@ namespace Visualization
             {
                 segment.Age += FadeSpeed;
                 float alpha = Mathf.Max(0.1f, 1f - segment.Age);
-
-                // Update gradient with faded alpha
                 UpdateLineRendererGradient(segment.LineRenderer, segment.Energies, alpha);
             }
         }
-
-        // ====================================================================
-        // LINE RENDERER SETUP & UPDATE
-        // ====================================================================
 
         private void SetupLineRenderer(LineRenderer lr)
         {
@@ -424,15 +315,11 @@ namespace Visualization
             lr.useWorldSpace = true;
             lr.positionCount = 0;
 
-            // Use shader that supports vertex colors
             Shader lineShader = Shader.Find("Particles/Standard Unlit");
-            if (lineShader == null) lineShader = Shader.Find("Mobile/Particles/Additive");
-            if (lineShader == null) lineShader = Shader.Find("Unlit/Color");
             if (lineShader == null) lineShader = Shader.Find("Sprites/Default");
 
             lr.material = new Material(lineShader);
 
-            // Enable transparency
             if (CumulativeMode)
             {
                 lr.material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
@@ -446,28 +333,11 @@ namespace Visualization
             lr.endColor = Color.white;
         }
 
-        private void SetAgentColor()
-        {
-            if (Agent == null) return;
-
-            int colorIndex = Agent.AgentIndex % AgentColors.Length;
-            Color agentColor = AgentColors[colorIndex];
-
-            HighEnergyColor = agentColor;
-            LowEnergyColor = new Color(agentColor.r * 0.3f, agentColor.g * 0.3f, agentColor.b * 0.3f, agentColor.a);
-
-            if (DebugLog)
-            {
-                Debug.Log($"[TrajectoryVisualizer] Agent #{Agent.AgentIndex} color: {agentColor}");
-            }
-        }
-
         private void UpdateLineRendererGradient(LineRenderer lr, List<float> energies, float alphaMultiplier)
         {
             if (energies.Count < 2) return;
 
             Gradient gradient = new Gradient();
-
             int keyCount = Mathf.Min(8, energies.Count);
             GradientColorKey[] colorKeys = new GradientColorKey[keyCount];
             GradientAlphaKey[] alphaKeys = new GradientAlphaKey[keyCount];
@@ -480,10 +350,11 @@ namespace Visualization
                 int energyIndex = Mathf.FloorToInt(t * (energies.Count - 1));
 
                 float energyFraction = energies[energyIndex] / initialEnergy;
+
+                // Gradient: HighEnergy (Start) -> LowEnergy (End)
                 Color color = Color.Lerp(LowEnergyColor, HighEnergyColor, energyFraction);
 
                 float alpha = color.a * alphaMultiplier;
-
                 colorKeys[i] = new GradientColorKey(color, t);
                 alphaKeys[i] = new GradientAlphaKey(alpha, t);
             }
@@ -500,11 +371,7 @@ namespace Visualization
         {
             EnableVisualization = enabled;
             _currentLineRenderer.enabled = enabled;
-
-            foreach (var segment in _episodeSegments)
-            {
-                segment.LineRenderer.enabled = enabled;
-            }
+            foreach (var segment in _episodeSegments) segment.LineRenderer.enabled = enabled;
         }
 
         public void SetCumulativeMode(bool cumulative)
@@ -514,22 +381,15 @@ namespace Visualization
                 CumulativeMode = cumulative;
                 ClearTrajectory();
                 SetupLineRenderer(_currentLineRenderer);
-                SetAgentColor();
+                // Usuniêto SetAgentColor()
             }
         }
 
-        public int GetEpisodeCount()
-        {
-            return _episodeCount;
-        }
-
+        public int GetEpisodeCount() => _episodeCount;
         public int GetTotalPointCount()
         {
             int total = _currentPoints.Count;
-            foreach (var segment in _episodeSegments)
-            {
-                total += segment.Points.Count;
-            }
+            foreach (var segment in _episodeSegments) total += segment.Points.Count;
             return total;
         }
     }
