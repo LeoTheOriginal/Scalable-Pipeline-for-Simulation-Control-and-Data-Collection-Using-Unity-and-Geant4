@@ -1,15 +1,25 @@
-# ML-Agents Training Configuration - VERSION 6 SAC
-# SOFT ACTOR-CRITIC: Built-in entropy maximization!
+# ==============================================================================
+# ML-Agents Training Configuration - SAC v1
+# ==============================================================================
+# SOFT ACTOR-CRITIC
 #
-# WHY SAC FOR THIS PROBLEM:
-# - Automatic entropy tuning (no manual beta scheduling!)
-# - Maximum entropy framework = natural exploration
-# - Off-policy = more sample efficient
+# Off-policy algorithm with automatic entropy tuning.
+# Maximum entropy framework naturally encourages exploration.
+#
+# Key features:
+# - Off-policy learning (more sample efficient)
+# - Automatic entropy coefficient tuning (no manual beta!)
+# - Large replay buffer for experience reuse
 # - Excellent for continuous action spaces
 #
-# Usage:
-#   mlagents-learn electron_sac_v6.yaml --run-id=v6_sac --force
+# SAC vs PPO:
+# - SAC: Off-policy, automatic exploration, sample efficient
+# - PPO: On-policy, manual entropy (beta), more stable
 #
+# Usage:
+#   mlagents-learn electron_sac_v1.yaml --run-id=sac_v1 --force
+#
+# ==============================================================================
 
 behaviors:
 
@@ -37,7 +47,7 @@ behaviors:
 
     reward_signals:
       extrinsic:
-        gamma: 0.99
+        gamma: 0.995
         strength: 1.0
 
       curiosity:
@@ -48,11 +58,11 @@ behaviors:
           hidden_units: 128
         learning_rate: 3.0e-4
 
-    max_steps: 2000000
+    max_steps: 1000000
     time_horizon: 256
     summary_freq: 5000
 
-    keep_checkpoints: 30
+    keep_checkpoints: 25
     checkpoint_interval: 50000
 
   ElectronPhysics_Inference:
@@ -64,6 +74,9 @@ behaviors:
     max_steps: 0
     time_horizon: 256
 
+# ==============================================================================
+# ENGINE CONFIGURATION
+# ==============================================================================
 engine_settings:
   width: 84
   height: 84
@@ -72,8 +85,11 @@ engine_settings:
   target_frame_rate: -1
   capture_frame_rate: 60
 
+# ==============================================================================
+# CHECKPOINT SETTINGS
+# ==============================================================================
 checkpoint_settings:
-  run_id: v6_sac
+  run_id: sac_v1
   initialize_from: null
   load_model: false
   resume: false
