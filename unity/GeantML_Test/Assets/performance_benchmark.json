@@ -1,26 +1,26 @@
 {
     "Geant4": {
         "SystemName": "Geant4 Monte Carlo",
-        "MeanTimeMs": 0.07354000210762024,
-        "StdDevMs": 0.026997191831469537,
-        "MinTimeMs": 0.04600000008940697,
-        "MaxTimeMs": 0.25600001215934756,
-        "MedianTimeMs": 0.06800000369548798,
-        "FPS": 13598.041015625,
-        "TotalSteps": 5010,
-        "NumRuns": 100
+        "MeanTimeMs": 0.07348419725894928,
+        "StdDevMs": 0.020741237327456476,
+        "MinTimeMs": 0.03999999910593033,
+        "MaxTimeMs": 0.5400000214576721,
+        "MedianTimeMs": 0.07000000029802323,
+        "FPS": 13608.3681640625,
+        "TotalSteps": 503316,
+        "NumRuns": 10000
     },
     "MLAgent": {
         "SystemName": "ML Agent (Trained)",
-        "MeanTimeMs": 0.00027699998463504016,
-        "StdDevMs": 0.0017714883433654905,
+        "MeanTimeMs": 0.00007746999472146854,
+        "StdDevMs": 0.00019312533549964428,
         "MinTimeMs": 0.0,
-        "MaxTimeMs": 0.017899999395012857,
+        "MaxTimeMs": 0.01889999955892563,
         "MedianTimeMs": 0.00009999999747378752,
-        "FPS": 3610108.5,
-        "TotalSteps": 5000,
-        "NumRuns": 100
+        "FPS": 12908223.0,
+        "TotalSteps": 500000,
+        "NumRuns": 10000
     },
-    "SpeedupFactor": 265.4873962402344,
-    "Timestamp": "2025-12-23 15:44:10"
+    "SpeedupFactor": 948.5504150390625,
+    "Timestamp": "2026-01-02 17:16:14"
 }

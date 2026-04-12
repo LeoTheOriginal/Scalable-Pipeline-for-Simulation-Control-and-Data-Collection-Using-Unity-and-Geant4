@@ -375,22 +375,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   NumParticles: 100000
-  RunOnStart: 1
+  RunOnStart: 0
   MaxVisualizationSteps: 10000000
   Mode: 0
   PointSize: 0.01
   BeamAxis: 2
-  HighEnergyColor: {r: 0.2, g: 0.4, b: 1, a: 0.8}
-  MidEnergyColor: {r: 1, g: 0.3, b: 0.3, a: 0.7}
-  LowEnergyColor: {r: 1, g: 1, b: 1, a: 0.9}
-  PhantomColor: {r: 0.1, g: 0.1, b: 0.3, a: 0.5}
+  HighEnergyColor: {r: 0.2, g: 0.4, b: 1, a: 0.9}
+  MidEnergyColor: {r: 1, g: 0.3, b: 0.3, a: 0.85}
+  LowEnergyColor: {r: 1, g: 1, b: 1, a: 0.95}
+  PhantomColor: {r: 0.05, g: 0.05, b: 0.15, a: 1}
   UseLogScale: 1
   MinAlpha: 0.05
   MaxAlpha: 0.95
   TextureResolution: 512
   StatisticsFilePath: geant4_statistics.txt
-  ShowProgress: 1
-  ShowCoordinateAxes: 1
+  ShowProgress: 0
+  ShowCoordinateAxes: 0
 --- !u!1 &7175709795397736305
 GameObject:
   m_ObjectHideFlags: 0

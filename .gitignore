@@ -8,16 +8,29 @@ unity/GeantML_Test/Library/
 unity/GeantML_Test/Temp/
 unity/GeantML_Test/Logs/
 unity/GeantML_Test/obj/
+unity/GeantML_Test/.vs/
+unity/GeantML_Test/UserSettings/
+unity/GeantML_Test/*.sln
+unity/GeantML_Test/*.csproj
+unity/GeantML_Test/Assets/Models/results/
 
 # Python
 __pycache__/
 *.py[cod]
 *.log
 
-# Test outputs (jeśli nie chcesz wrzucać CSV z testów)
+# Large data files (regenerable from simulation)
+python/data/geant4_raw_points.csv
+python/data/geant4_full_cloud.csv
+python/data/geant4_dll_export.txt
+
+# Intermediate density textures (regenerable from checkpoints)
+figures/density_texture/
+
+# Test outputs
 python/tests/trajectory_buffer_geant4/**/event_*.csv
 
-# IDE (opcjonalnie, zależy czy chcesz dzielić ustawienia projektu)
+# IDE
 .idea/
 *.iml
 

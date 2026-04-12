@@ -1,0 +1,2 @@
+StepCount,CheckpointName,MeanPathLength,StdPathLength,MeanPenetrationDepth,StdPenetrationDepth,MeanLateralSpread,StdLateralSpread,MeanScatterAngle,StdScatterAngle,NumParticles,BoundaryExits,BoundaryExitRate
+0,Geant4-Reference,4.8191,0.7417,-0.0001,1.2018,1.7595,0.9004,21.6436,2.8638,100000,168,0.17

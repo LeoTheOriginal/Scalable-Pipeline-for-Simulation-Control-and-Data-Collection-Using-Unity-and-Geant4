@@ -1,20 +1,28 @@
-# ML-Agents Training Configuration - VERSION 6
-# ANGULAR DIVERSITY + PROGRESSIVE BOUNDARIES
+# ==============================================================================
+# ML-Agents Training Configuration - PPO v1
+# ==============================================================================
+# PROXIMAL POLICY OPTIMIZATION
 #
-# KEY CHANGES in v6:
-# - MUCH HIGHER entropy (beta) to force exploration
-# - STRONGER curiosity to discover new angular sectors
-# - Longer time horizon to see full trajectory benefits
-# - Slower learning rate to prevent mode collapse
+# Base algorithm for electron transport simulation.
+# Uses high entropy (beta) to encourage exploration of all scattering angles.
 #
-# GOAL: Create "dandelion" pattern like Geant4
-# - Full 360° coverage in Y/Z plane
-# - Outward curving arcs
-# - Narrow entrance, wide at depth
+# Key features:
+# - On-policy learning
+# - Clipped surrogate objective for stable updates
+# - High entropy to prevent mode collapse
+# - Curiosity-driven exploration
 #
 # Usage:
-#   mlagents-learn electron_ppo_v6.yaml --run-id=v6_angular --force
+#   mlagents-learn electron_ppo_v1.yaml --run-id=ppo_v1 --force
 #
+# Learning rate sensitivity experiments:
+#   mlagents-learn electron_ppo_v1.yaml --run-id=ppo_lr_1e-4 --force \
+#     behaviors.ElectronPhysics.hyperparameters.learning_rate=1.0e-4
+#
+#   mlagents-learn electron_ppo_v1.yaml --run-id=ppo_lr_1e-5 --force \
+#     behaviors.ElectronPhysics.hyperparameters.learning_rate=1.0e-5
+#
+# ==============================================================================
 
 behaviors:
 
@@ -22,22 +30,18 @@ behaviors:
     trainer_type: ppo
 
     hyperparameters:
-      batch_size: 4096          # Larger batch for more stable gradients
-      buffer_size: 40960        # 10x batch size
+      batch_size: 4096
+      buffer_size: 40960
 
-      learning_rate: 5.0e-5     # SLOWER learning to prevent mode collapse
+      learning_rate: 5.0e-5
       learning_rate_schedule: linear
 
-      # ============================================================
-      # VERY HIGH ENTROPY - Force exploration of all directions!
-      # This is THE KEY to prevent mode collapse.
-      # ============================================================
-      beta: 0.15                # DOUBLED! Forces random exploration
-      beta_schedule: constant   # Keep high entropy throughout training
+      beta: 0.15
+      beta_schedule: constant
 
-      epsilon: 0.25             # Wider policy updates allowed
+      epsilon: 0.25
       lambd: 0.95
-      num_epoch: 3              # Fewer epochs = less overfitting
+      num_epoch: 3
 
     network_settings:
       normalize: true
@@ -47,35 +51,27 @@ behaviors:
 
     reward_signals:
       extrinsic:
-        gamma: 0.995            # High gamma for long-term trajectory planning
+        gamma: 0.995
         strength: 1.0
 
-      # ============================================================
-      # STRONG CURIOSITY - Reward exploring new angular sectors!
-      # ============================================================
       curiosity:
         gamma: 0.99
-        strength: 0.08          # MUCH STRONGER! Was 0.03
+        strength: 0.08
         network_settings:
           normalize: true
-          hidden_units: 256     # Larger network for better state encoding
+          hidden_units: 256
           num_layers: 2
-        learning_rate: 3.0e-4   # Faster curiosity learning
+        learning_rate: 3.0e-4
 
-    # Training duration
-    max_steps: 2000000          # 2M steps for full exploration
-    time_horizon: 1024          # LONGER! See full trajectory benefits
-    summary_freq: 5000          # More frequent logging
+    max_steps: 1000000
+    time_horizon: 1024
+    summary_freq: 5000
 
-    keep_checkpoints: 30
-    checkpoint_interval: 50000  # More frequent checkpoints
+    keep_checkpoints: 25
+    checkpoint_interval: 50000
 
-    # Threaded training for speed
     threaded: true
 
-  # ============================================================================
-  # INFERENCE MODE
-  # ============================================================================
   ElectronPhysics_Inference:
     trainer_type: ppo
     network_settings:
@@ -85,139 +81,25 @@ behaviors:
     max_steps: 0
     time_horizon: 512
 
-# ============================================================================
+# ==============================================================================
 # ENGINE CONFIGURATION
-# ============================================================================
+# ==============================================================================
 engine_settings:
   width: 84
   height: 84
   quality_level: 1
-  time_scale: 20              # Fast training
-  target_frame_rate: -1       # Unlimited FPS
+  time_scale: 20
+  target_frame_rate: -1
   capture_frame_rate: 60
 
-# ============================================================================
+# ==============================================================================
 # CHECKPOINT SETTINGS
-# ============================================================================
+# ==============================================================================
 checkpoint_settings:
-  run_id: v6_angular
+  run_id: ppo_v1
   initialize_from: null
   load_model: false
   resume: false
   force: false
   train_model: true
   inference: false
-
-# ============================================================================
-# V6 TRAINING PHILOSOPHY: ANGULAR DIVERSITY
-# ============================================================================
-#
-# The key insight from Geant4 reference:
-#
-# 1. Electrons scatter in ALL directions (full 360° coverage)
-# 2. Scattering creates OUTWARD curving arcs (not random walks)
-# 3. Deep penetration + wide spread = "dandelion" shape
-#
-# The problem with previous versions:
-# - Agent found ONE good trajectory and stuck with it
-# - Mode collapse: all trajectories go same direction
-# - Lost the diversity that defines real electron transport
-#
-# V6 Solution:
-# - Track which angular sectors (8 sectors = 45° each) are explored
-# - Big bonus for hitting NEW sectors
-# - Penalty for concentrating in one sector
-# - Progressive boundary penalty instead of hard episode termination
-# - Reward for scattering OUTWARD from center axis
-#
-# ============================================================================
-# INSPECTOR SETTINGS TO CONFIGURE IN UNITY
-# ============================================================================
-#
-# These v6 weights should be set in the Unity Inspector:
-#
-# === Angular Diversity (NEW!) ===
-# W_AngularDiversity: 60       - Weight for exploring all directions
-# AngularSectors: 8            - Number of sectors (8 = 45° each)
-# UnexploredSectorBonus: 15    - Big bonus for hitting new sector
-#
-# === Progressive Boundaries (NEW!) ===
-# SoftBoundaryStart: 0.8       - Penalty starts at 80% of phantom edge
-# MaxBoundaryPenalty: 5        - Maximum penalty at edge (not death!)
-#
-# === Outward Arc (NEW!) ===
-# W_OutwardScatter: 30         - Reward for scattering away from axis
-#
-# === Existing Weights (adjusted) ===
-# W_ForwardProgress: 100       - Still important for penetration
-# W_InitialStraight: 80        - Initial straight section
-# W_ScatteringVariance: 40     - Scattering diversity
-# W_LateralSpread: 40          - Final lateral spread
-#
-# ============================================================================
-# EXPECTED TRAINING PROGRESSION
-# ============================================================================
-#
-# 0-100k steps:
-#   - Random exploration
-#   - Agent discovers forward motion is good
-#   - Angular coverage should be ~50%
-#
-# 100k-300k steps:
-#   - Learning to balance forward + scattering
-#   - Angular coverage should reach ~70%
-#   - Curiosity drives exploration of new sectors
-#
-# 300k-500k steps:
-#   - Refining the "dandelion" shape
-#   - Angular coverage should reach ~85%+
-#   - Outward arcs becoming visible
-#
-# 500k-1M steps:
-#   - Fine-tuning to match Geant4 statistics
-#   - Full 360° coverage maintained
-#   - Episode length stable at ~300+ steps
-#
-# ============================================================================
-# MONITORING IN TENSORBOARD
-# ============================================================================
-#
-# Key metrics to watch:
-#
-# 1. Policy/Entropy: MUST stay HIGH (>1.5) for first 500k steps!
-#    If it drops below 1.0, agent is collapsing to one trajectory.
-#
-# 2. Episode Length: Should INCREASE over time (300+), not decrease!
-#    Decreasing = agent dying early = bad boundaries.
-#
-# 3. Cumulative Reward: Should increase but NOT plateau early.
-#    Early plateau = mode collapse.
-#
-# 4. Curiosity Forward Loss: Should NOT drop to zero.
-#    Dropping = agent stopped exploring new states.
-#
-# ============================================================================
-# IF AGENT STILL COLLAPSES TO ONE DIRECTION
-# ============================================================================
-#
-# If after 300k steps agent still concentrates trajectories:
-#
-# 1. Increase entropy even more:
-#    beta: 0.25
-#
-# 2. Increase curiosity:
-#    curiosity.strength: 0.15
-#
-# 3. Increase angular diversity in Unity:
-#    W_AngularDiversity: 100
-#    UnexploredSectorBonus: 30
-#
-# 4. Add more sectors:
-#    AngularSectors: 16 (22.5° each)
-#
-# 5. Reduce forward progress weight temporarily:
-#    W_ForwardProgress: 50
-#
-# The key is: diversity must be MORE valuable than concentration!
-#
-# ============================================================================

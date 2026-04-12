@@ -9,7 +9,8 @@ namespace Visualization
     /// Visualizer for Geant4 batch simulation trajectories.
     /// Renders cumulative trajectory density with energy-based coloring.
     /// 
-    /// Energy gradient: Blue (high energy) → Red → White (energy → 0)
+    /// Energy gradient (physics standard):
+    ///   Blue (high energy, 10 MeV) → Red (mid, 5 MeV) → White (low/zero)
     /// 
     /// Coordinate system:
     /// - Geant4: Beam travels in +Z direction (depth into phantom)
@@ -44,17 +45,17 @@ namespace Visualization
         public BeamDirection BeamAxis = BeamDirection.PositiveZ;
 
         [Header("Color Settings")]
-        [Tooltip("High energy color (10 MeV)")]
-        public Color HighEnergyColor = new Color(0.2f, 0.4f, 1.0f, 0.8f);
+        [Tooltip("High energy color (10 MeV) - Blue (physics standard)")]
+        public Color HighEnergyColor = new Color(0.2f, 0.4f, 1.0f, 0.9f);
 
-        [Tooltip("Mid energy color (5 MeV)")]
-        public Color MidEnergyColor = new Color(1.0f, 0.3f, 0.3f, 0.7f);
+        [Tooltip("Mid energy color (5 MeV) - Red")]
+        public Color MidEnergyColor = new Color(1.0f, 0.3f, 0.3f, 0.85f);
 
-        [Tooltip("Low energy color (approaching 0 MeV) - WHITE")]
-        public Color LowEnergyColor = new Color(1.0f, 1.0f, 1.0f, 0.9f);
+        [Tooltip("Low energy color (approaching 0 MeV) - White")]
+        public Color LowEnergyColor = new Color(1.0f, 1.0f, 1.0f, 0.95f);
 
-        [Tooltip("Background/phantom color")]
-        public Color PhantomColor = new Color(0.1f, 0.1f, 0.3f, 0.5f);
+        [Tooltip("Background/phantom color (dark navy)")]
+        public Color PhantomColor = new Color(0.05f, 0.05f, 0.15f, 1.0f);
 
         [Header("Density Settings")]
         [Tooltip("Use logarithmic scaling for density")]
@@ -74,6 +75,13 @@ namespace Visualization
         [Header("Statistics Export")]
         [Tooltip("Path for statistics file")]
         public string StatisticsFilePath = "geant4_statistics.txt";
+
+        [Header("PNG Export")]
+        [Tooltip("Export density texture to PNG file (only works in DensityTexture mode)")]
+        public bool ExportDensityToPNG = false;
+
+        [Tooltip("Output path for PNG file (relative to Assets/ or absolute)")]
+        public string PNGExportPath = "geant4_density.png";
 
         [Header("Debug")]
         public bool ShowProgress = false;
@@ -120,6 +128,16 @@ namespace Visualization
 
         // Track particle boundaries for line segments
         private List<int> _particleBoundaries;
+
+        // ====================================================================
+        // PUBLIC PROPERTIES
+        // ====================================================================
+
+        /// <summary>Whether simulation is currently running.</summary>
+        public bool IsSimulating => _isSimulating;
+
+        /// <summary>Whether visualization data is available.</summary>
+        public bool HasData => _hasData;
 
         // ====================================================================
         // PUBLIC API
@@ -184,6 +202,54 @@ namespace Visualization
 
             _hasData = false;
             _stepCount = 0;
+        }
+
+        /// <summary>
+        /// Full reset - clears visualization and all data.
+        /// </summary>
+        public void FullReset()
+        {
+            Debug.Log("[Geant4Visualizer] Performing full reset...");
+
+            StopAllCoroutines();
+            _isSimulating = false;
+
+            ClearVisualization();
+
+            _positionsX = null;
+            _positionsY = null;
+            _positionsZ = null;
+            _energies = null;
+            _statistics = default;
+
+            System.GC.Collect();
+            Resources.UnloadUnusedAssets();
+
+            Debug.Log("[Geant4Visualizer] Full reset complete");
+        }
+
+        /// <summary>
+        /// Get the generated density texture (for external PNG export).
+        /// </summary>
+        public Texture2D GetDensityTexture()
+        {
+            return _densityTexture;
+        }
+
+        /// <summary>
+        /// Export density texture to PNG file.
+        /// </summary>
+        public void ExportDensityTexturePNG(string filePath)
+        {
+            if (_densityTexture == null)
+            {
+                Debug.LogError("[Geant4Visualizer] No density texture to export!");
+                return;
+            }
+
+            byte[] pngData = _densityTexture.EncodeToPNG();
+            System.IO.File.WriteAllBytes(filePath, pngData);
+            Debug.Log($"[Geant4Visualizer] PNG exported: {filePath}");
         }
 
         // ====================================================================
@@ -578,6 +644,7 @@ namespace Visualization
             // Create texture
             _densityTexture = new Texture2D(TextureResolution, TextureResolution, TextureFormat.RGBA32, false);
             _densityTexture.filterMode = FilterMode.Bilinear;
+            _densityTexture.wrapMode = TextureWrapMode.Clamp;
 
             for (int x = 0; x < TextureResolution; x++)
             {
@@ -586,7 +653,7 @@ namespace Visualization
                     float density = _densityMap[x, y];
 
                     Color color;
-                    if (density < 0.1f)
+                    if (density < 0.5f)
                     {
                         // Empty region - use phantom color
                         color = PhantomColor;
@@ -624,6 +691,29 @@ namespace Visualization
 
             // Create visualization quad
             CreateDensityTextureQuad(lateralRange, depthRange);
+
+            // Export to PNG if enabled
+            if (ExportDensityToPNG)
+            {
+                string fullPath;
+                if (System.IO.Path.IsPathRooted(PNGExportPath))
+                {
+                    fullPath = PNGExportPath;
+                }
+                else
+                {
+                    fullPath = System.IO.Path.Combine(Application.dataPath, PNGExportPath);
+                }
+
+                // Ensure directory exists
+                string directory = System.IO.Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(directory) && !System.IO.Directory.Exists(directory))
+                {
+                    System.IO.Directory.CreateDirectory(directory);
+                }
+
+                ExportDensityTexturePNG(fullPath);
+            }
 
             Debug.Log("[Geant4Visualizer] Density texture visualization complete!");
         }
@@ -687,6 +777,10 @@ namespace Visualization
             _visualizationObject.name = "Geant4DensityMap";
             _visualizationObject.transform.SetParent(transform);
 
+            // Remove collider
+            var collider = _visualizationObject.GetComponent<Collider>();
+            if (collider != null) Destroy(collider);
+
             // Fixed positioning: centered at origin with 10x10 scale
             switch (BeamAxis)
             {
@@ -714,8 +808,320 @@ namespace Visualization
 
             // Apply texture
             MeshRenderer mr = _visualizationObject.GetComponent<MeshRenderer>();
-            mr.material = new Material(Shader.Find("Unlit/Transparent"));
-            mr.material.mainTexture = _densityTexture;
+            Material mat = new Material(Shader.Find("Unlit/Transparent"));
+            if (mat.shader == null)
+                mat = new Material(Shader.Find("Sprites/Default"));
+            mat.mainTexture = _densityTexture;
+            mr.material = mat;
+        }
+
+        // ====================================================================
+        // PER-TRAJECTORY CSV EXPORT
+        // ====================================================================
+
+        /// <summary>
+        /// Export per-trajectory data to CSV for Python analysis.
+        /// Uses existing per-step data and boundary detection.
+        /// </summary>
+        [ContextMenu("Export Trajectories to CSV")]
+        public void ExportTrajectoriesToCSV()
+        {
+            if (!_hasData || _positionsX == null)
+            {
+                Debug.LogError("[Geant4Visualizer] No data to export! Run simulation first.");
+                return;
+            }
+
+            // Detect particle boundaries if not already done
+            if (_particleBoundaries == null || _particleBoundaries.Count == 0)
+            {
+                DetectParticleBoundaries();
+            }
+
+            Debug.Log($"[Geant4Visualizer] Exporting {_particleBoundaries.Count} trajectories to CSV...");
+
+            // Build trajectory list
+            var trajectories = new System.Collections.Generic.List<TrajectoryRecord>();
+
+            for (int t = 0; t < _particleBoundaries.Count; t++)
+            {
+                int startIdx = _particleBoundaries[t];
+                int endIdx = (t < _particleBoundaries.Count - 1) ? _particleBoundaries[t + 1] - 1 : _positionsX.Length - 1;
+
+                if (endIdx <= startIdx)
+                    continue;
+
+                var record = CalculateTrajectoryMetrics(t, startIdx, endIdx);
+                trajectories.Add(record);
+            }
+
+            // Export to CSV
+            string outputDir = @"C:\Thesis\python\data";
+            string trajectoriesFile = System.IO.Path.Combine(outputDir, "geant4_trajectories.csv");
+            string statisticsFile = System.IO.Path.Combine(outputDir, "geant4_statistics.csv");
+
+            System.IO.Directory.CreateDirectory(outputDir);
+
+            // 1. Per-trajectory CSV
+            ExportTrajectoryRecords(trajectories, trajectoriesFile);
+
+            // 2. Aggregated statistics CSV
+            ExportAggregatedStatistics(trajectories, statisticsFile);
+
+            Debug.Log($"[Geant4Visualizer] Export complete!");
+            Debug.Log($"  Trajectories: {trajectoriesFile}");
+            Debug.Log($"  Statistics: {statisticsFile}");
+        }
+
+        private struct TrajectoryRecord
+        {
+            public int TrajectoryID;
+            public float PathLength;
+            public float PenetrationDepth;
+            public float LateralSpread;
+            public float LateralY;
+            public float LateralZ;
+            public float MeanScatterAngle;
+            public float FinalEnergy;
+            public int NumSteps;
+            public bool BoundaryExit;
+        }
+
+        private TrajectoryRecord CalculateTrajectoryMetrics(int trajectoryID, int startIdx, int endIdx)
+        {
+            var record = new TrajectoryRecord();
+            record.TrajectoryID = trajectoryID;
+            record.NumSteps = endIdx - startIdx + 1;
+
+            // Calculate path length (sum of step distances)
+            float pathLength = 0f;
+            for (int i = startIdx; i < endIdx; i++)
+            {
+                float dx = _positionsX[i + 1] - _positionsX[i];
+                float dy = _positionsY[i + 1] - _positionsY[i];
+                float dz = _positionsZ[i + 1] - _positionsZ[i];
+                pathLength += Mathf.Sqrt(dx * dx + dy * dy + dz * dz);
+            }
+            record.PathLength = pathLength;
+
+            // Get entry and final positions
+            float entryX = _positionsX[startIdx];
+            float entryY = _positionsY[startIdx];
+            float entryZ = _positionsZ[startIdx];
+
+            float finalX = _positionsX[endIdx];
+            float finalY = _positionsY[endIdx];
+            float finalZ = _positionsZ[endIdx];
+
+            // Calculate metrics based on beam direction
+            switch (BeamAxis)
+            {
+                case BeamDirection.PositiveZ:
+                    // Beam travels in +Z direction
+                    // Z = depth, X and Y are lateral
+                    record.PenetrationDepth = finalZ - entryZ;
+                    record.LateralY = finalX;
+                    record.LateralZ = finalY;
+                    record.LateralSpread = Mathf.Sqrt(finalX * finalX + finalY * finalY);
+                    break;
+
+                case BeamDirection.PositiveY:
+                    // Beam travels in +Y direction
+                    record.PenetrationDepth = finalY - entryY;
+                    record.LateralY = finalX;
+                    record.LateralZ = finalZ;
+                    record.LateralSpread = Mathf.Sqrt(finalX * finalX + finalZ * finalZ);
+                    break;
+
+                case BeamDirection.PositiveX:
+                    // Beam travels in +X direction (same as Unity ML agents)
+                    record.PenetrationDepth = finalX - entryX;
+                    record.LateralY = finalY;
+                    record.LateralZ = finalZ;
+                    record.LateralSpread = Mathf.Sqrt(finalY * finalY + finalZ * finalZ);
+                    break;
+            }
+
+            // Mean scatter angle
+            float sumAngles = 0f;
+            int angleCount = 0;
+
+            for (int i = startIdx; i < endIdx - 1; i++)
+            {
+                Vector3 dir1 = new Vector3(
+                    _positionsX[i + 1] - _positionsX[i],
+                    _positionsY[i + 1] - _positionsY[i],
+                    _positionsZ[i + 1] - _positionsZ[i]
+                ).normalized;
+
+                Vector3 dir2 = new Vector3(
+                    _positionsX[i + 2] - _positionsX[i + 1],
+                    _positionsY[i + 2] - _positionsY[i + 1],
+                    _positionsZ[i + 2] - _positionsZ[i + 1]
+                ).normalized;
+
+                float angle = Vector3.Angle(dir1, dir2);
+                if (!float.IsNaN(angle) && angle > 0.1f)
+                {
+                    sumAngles += angle;
+                    angleCount++;
+                }
+            }
+
+            record.MeanScatterAngle = angleCount > 0 ? sumAngles / angleCount : 0f;
+            record.FinalEnergy = _energies[endIdx];
+            record.BoundaryExit = record.FinalEnergy > 0.1f;
+
+            return record;
+        }
+
+        private void ExportTrajectoryRecords(System.Collections.Generic.List<TrajectoryRecord> trajectories, string filepath)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            // Header
+            sb.AppendLine("TrajectoryID,PathLength,PenetrationDepth,LateralSpread,LateralY,LateralZ,MeanScatterAngle,FinalEnergy,NumSteps,BoundaryExit");
+
+            // Data rows
+            foreach (var t in trajectories)
+            {
+                sb.AppendLine($"{t.TrajectoryID}," +
+                             $"{t.PathLength:F4}," +
+                             $"{t.PenetrationDepth:F4}," +
+                             $"{t.LateralSpread:F4}," +
+                             $"{t.LateralY:F4}," +
+                             $"{t.LateralZ:F4}," +
+                             $"{t.MeanScatterAngle:F4}," +
+                             $"{t.FinalEnergy:F4}," +
+                             $"{t.NumSteps}," +
+                             $"{(t.BoundaryExit ? "True" : "False")}");
+            }
+
+            System.IO.File.WriteAllText(filepath, sb.ToString());
+            Debug.Log($"[Geant4Visualizer] ✓ Exported {trajectories.Count} trajectories to: {filepath}");
+        }
+
+        private void ExportAggregatedStatistics(System.Collections.Generic.List<TrajectoryRecord> trajectories, string filepath)
+        {
+            int count = trajectories.Count;
+            if (count == 0) return;
+
+            // Calculate means
+            float sumPathLength = 0f;
+            float sumPenetrationDepth = 0f;
+            float sumLateralSpread = 0f;
+            float sumScatterAngle = 0f;
+            int boundaryExits = 0;
+
+            foreach (var t in trajectories)
+            {
+                sumPathLength += t.PathLength;
+                sumPenetrationDepth += t.PenetrationDepth;
+                sumLateralSpread += t.LateralSpread;
+                sumScatterAngle += t.MeanScatterAngle;
+                if (t.BoundaryExit) boundaryExits++;
+            }
+
+            float meanPathLength = sumPathLength / count;
+            float meanPenetrationDepth = sumPenetrationDepth / count;
+            float meanLateralSpread = sumLateralSpread / count;
+            float meanScatterAngle = sumScatterAngle / count;
+
+            // Calculate standard deviations
+            float sumSqPathLength = 0f;
+            float sumSqPenetrationDepth = 0f;
+            float sumSqLateralSpread = 0f;
+            float sumSqScatterAngle = 0f;
+
+            foreach (var t in trajectories)
+            {
+                sumSqPathLength += Mathf.Pow(t.PathLength - meanPathLength, 2);
+                sumSqPenetrationDepth += Mathf.Pow(t.PenetrationDepth - meanPenetrationDepth, 2);
+                sumSqLateralSpread += Mathf.Pow(t.LateralSpread - meanLateralSpread, 2);
+                sumSqScatterAngle += Mathf.Pow(t.MeanScatterAngle - meanScatterAngle, 2);
+            }
+
+            float stdPathLength = Mathf.Sqrt(sumSqPathLength / count);
+            float stdPenetrationDepth = Mathf.Sqrt(sumSqPenetrationDepth / count);
+            float stdLateralSpread = Mathf.Sqrt(sumSqLateralSpread / count);
+            float stdScatterAngle = Mathf.Sqrt(sumSqScatterAngle / count);
+
+            float boundaryExitRate = (float)boundaryExits / count * 100f;
+
+            // Write CSV
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine("StepCount,CheckpointName," +
+                         "MeanPathLength,StdPathLength," +
+                         "MeanPenetrationDepth,StdPenetrationDepth," +
+                         "MeanLateralSpread,StdLateralSpread," +
+                         "MeanScatterAngle,StdScatterAngle," +
+                         "NumParticles,BoundaryExits,BoundaryExitRate");
+
+            sb.AppendLine($"0,Geant4-Reference," +
+                         $"{meanPathLength:F4},{stdPathLength:F4}," +
+                         $"{meanPenetrationDepth:F4},{stdPenetrationDepth:F4}," +
+                         $"{meanLateralSpread:F4},{stdLateralSpread:F4}," +
+                         $"{meanScatterAngle:F4},{stdScatterAngle:F4}," +
+                         $"{count},{boundaryExits},{boundaryExitRate:F2}");
+
+            System.IO.File.WriteAllText(filepath, sb.ToString());
+            Debug.Log($"[Geant4Visualizer] ✓ Exported aggregated statistics to: {filepath}");
+        }
+
+        /// <summary>
+        /// EKSPORT SUROWYCH DANYCH (RAW TRAJECTORY POINTS).
+        /// Zapisuje czyste współrzędne X, Y, Z każdej cząstki w każdym kroku.
+        /// Żadnych obliczeń, żadnych lateralów - czysta fizyka.
+        /// </summary>
+        [ContextMenu("Export RAW Point Cloud")]
+        public void ExportFullPointCloudToCSV()
+        {
+            if (!_hasData || _positionsX == null || _positionsX.Length == 0)
+            {
+                Debug.LogError("[Geant4Visualizer] Brak danych! Uruchom symulację przed eksportem.");
+                return;
+            }
+
+            string filename = "geant4_raw_points.csv";
+            // Możesz zmienić ścieżkę na inną jeśli wolisz
+            string outputDir = @"C:\Thesis\python\data";
+            string fullPath = System.IO.Path.Combine(outputDir, filename);
+
+            Debug.Log($"[Export] Zapisuję {_positionsX.Length} surowych punktów do {fullPath}...");
+
+            try
+            {
+                if (!System.IO.Directory.Exists(outputDir))
+                    System.IO.Directory.CreateDirectory(outputDir);
+
+                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(fullPath))
+                {
+                    // Nagłówek: Czyste współrzędne Unity
+                    writer.WriteLine("X,Y,Z,Energy");
+
+                    int stepCount = _positionsX.Length;
+
+                    // Zapisujemy każdy krok (stride = 1)
+                    // Format CultureInfo.InvariantCulture zapewnia kropkę jako separator dziesiętny
+                    for (int i = 0; i < stepCount; i++)
+                    {
+                        writer.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                            "{0:F4},{1:F4},{2:F4},{3:F4}",
+                            _positionsX[i],
+                            _positionsY[i],
+                            _positionsZ[i],
+                            _energies[i]
+                        ));
+                    }
+                }
+
+                Debug.Log($"[Export] SUKCES! Surowe dane zapisane.");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Export] Błąd zapisu: {ex.Message}");
+            }
         }
 
         // ====================================================================
@@ -755,7 +1161,8 @@ namespace Visualization
 
         /// <summary>
         /// Get color based on energy fraction (0-1).
-        /// Gradient: Blue (high) → Red (mid) → White (low/zero)
+        /// Uses physics-standard gradient matching CERN/Geant4 visualization:
+        ///   Blue (high energy, 10 MeV) → Red (mid, 5 MeV) → White (low/zero)
         /// </summary>
         private Color GetEnergyColor(float energyFraction)
         {
@@ -763,7 +1170,7 @@ namespace Visualization
 
             if (energyFraction > 0.5f)
             {
-                // High energy: Blue → Red
+                // High energy: Red → Blue
                 float t = (energyFraction - 0.5f) * 2.0f;
                 return Color.Lerp(MidEnergyColor, HighEnergyColor, t);
             }
@@ -826,6 +1233,28 @@ namespace Visualization
             else
             {
                 Debug.LogWarning("No data loaded - run simulation first");
+            }
+        }
+
+        [ContextMenu("Export Density PNG Now")]
+        private void EditorExportDensityPNG()
+        {
+            if (_densityTexture != null)
+            {
+                string fullPath;
+                if (System.IO.Path.IsPathRooted(PNGExportPath))
+                {
+                    fullPath = PNGExportPath;
+                }
+                else
+                {
+                    fullPath = System.IO.Path.Combine(Application.dataPath, PNGExportPath);
+                }
+                ExportDensityTexturePNG(fullPath);
+            }
+            else
+            {
+                Debug.LogWarning("[Geant4Visualizer] No density texture - run simulation with DensityTexture mode first");
             }
         }
 #endif

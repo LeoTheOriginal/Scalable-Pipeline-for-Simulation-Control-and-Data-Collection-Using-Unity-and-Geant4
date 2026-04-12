@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -231,19 +231,19 @@ namespace Benchmarking
             }
 
             List<float> trajectoryTimes = new List<float>();
-            int actualTotalSteps = 0; // Dodajemy licznik faktycznych kroków
+            int actualTotalSteps = 0; // Dodajemy licznik faktycznych krokÃ³w
             Stopwatch episodeTimer = new Stopwatch();
 
             for (int run = 0; run < NumBenchmarkRuns; run++)
             {
-                // Wa¿ne: Resetujemy agenta przed startem pomiaru
+                // WaÅ¼ne: Resetujemy agenta przed startem pomiaru
                 MLAgent.OnEpisodeBegin();
 
                 episodeTimer.Restart();
 
                 int stepsThisRun = 0;
-                // Pêtla wykonuje DOK£ADNIE TargetStepsForComparison, 
-                // chyba ¿e agent zginie/wyjdzie za mapê wczeœniej
+                // PÄ™tla wykonuje DOKÅADNIE TargetStepsForComparison, 
+                // chyba Å¼e agent zginie/wyjdzie za mapÄ™ wczeÅ›niej
                 while (stepsThisRun < TargetStepsForComparison)
                 {
                     MLAgent.RequestDecision();
@@ -282,7 +282,7 @@ namespace Benchmarking
                 MinTimeMs = trajectoryTimes.First(),
                 MaxTimeMs = trajectoryTimes.Last(),
                 MedianTimeMs = trajectoryTimes[trajectoryTimes.Count / 2],
-                TotalSteps = actualTotalSteps, // TERAZ: Faktyczna liczba kroków zapisana w JSON
+                TotalSteps = actualTotalSteps, // TERAZ: Faktyczna liczba krokÃ³w zapisana w JSON
                 NumRuns = NumBenchmarkRuns,
                 FPS = 1000.0f / mean
             };

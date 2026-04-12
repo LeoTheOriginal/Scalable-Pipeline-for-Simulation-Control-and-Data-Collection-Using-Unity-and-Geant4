@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using Agents;
 
@@ -8,6 +8,9 @@ namespace Visualization
     /// Trajectory visualizer with CUMULATIVE MODE support.
     /// Uses multiple LineRenderers to prevent teleport lines between episodes.
     /// Each episode gets its own LineRenderer = perfect separation!
+    /// 
+    /// Energy gradient (physics standard, matching Geant4):
+    ///   Blue (high energy, 10 MeV) → Red (mid, 5 MeV) → White (low/zero)
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
     public class TrajectoryVisualizer : MonoBehaviour
@@ -45,12 +48,15 @@ namespace Visualization
         [Tooltip("Line width")]
         public float LineWidth = 0.02f;
 
-        [Header("Color Settings")]
-        [Tooltip("Start color (high energy) - Green for thesis")]
-        public Color HighEnergyColor = Color.green; // Zmieniono na zielony
+        [Header("Color Settings (Physics Standard)")]
+        [Tooltip("High energy color (10 MeV) - Blue (physics standard)")]
+        public Color HighEnergyColor = new Color(0.2f, 0.4f, 1.0f, 0.9f);
 
-        [Tooltip("End color (low energy) - Red for thesis")]
-        public Color LowEnergyColor = Color.red;   // Zmieniono na czerwony
+        [Tooltip("Mid energy color (5 MeV) - Red")]
+        public Color MidEnergyColor = new Color(1.0f, 0.3f, 0.3f, 0.85f);
+
+        [Tooltip("Low energy color (approaching 0 MeV) - White")]
+        public Color LowEnergyColor = new Color(1.0f, 1.0f, 1.0f, 0.95f);
 
         [Tooltip("Use energy-based coloring")]
         public bool UseEnergyGradient = true;
@@ -124,8 +130,6 @@ namespace Visualization
             }
 
             SubscribeToAgent();
-
-            // USUNI�TO: SetAgentColor(); - to nadpisywa�o kolory!
 
             if (DebugLog)
             {
@@ -333,6 +337,10 @@ namespace Visualization
             lr.endColor = Color.white;
         }
 
+        /// <summary>
+        /// Update LineRenderer gradient using physics-standard color scheme:
+        ///   Blue (high energy) → Red (mid) → White (low/zero)
+        /// </summary>
         private void UpdateLineRendererGradient(LineRenderer lr, List<float> energies, float alphaMultiplier)
         {
             if (energies.Count < 2) return;
@@ -349,10 +357,10 @@ namespace Visualization
                 float t = (float)i / (keyCount - 1);
                 int energyIndex = Mathf.FloorToInt(t * (energies.Count - 1));
 
-                float energyFraction = energies[energyIndex] / initialEnergy;
+                float energyFraction = Mathf.Clamp01(energies[energyIndex] / initialEnergy);
 
-                // Gradient: HighEnergy (Start) -> LowEnergy (End)
-                Color color = Color.Lerp(LowEnergyColor, HighEnergyColor, energyFraction);
+                // Physics-standard gradient: Blue (high) → Red (mid) → White (low)
+                Color color = GetEnergyColor(energyFraction);
 
                 float alpha = color.a * alphaMultiplier;
                 colorKeys[i] = new GradientColorKey(color, t);
@@ -361,6 +369,29 @@ namespace Visualization
 
             gradient.SetKeys(colorKeys, alphaKeys);
             lr.colorGradient = gradient;
+        }
+
+        /// <summary>
+        /// Get color based on energy fraction (0-1).
+        /// Uses physics-standard gradient matching Geant4/CERN visualization:
+        ///   Blue (high energy, 10 MeV) → Red (mid, 5 MeV) → White (low/zero)
+        /// </summary>
+        private Color GetEnergyColor(float energyFraction)
+        {
+            energyFraction = Mathf.Clamp01(energyFraction);
+
+            if (energyFraction > 0.5f)
+            {
+                // High energy: Red → Blue
+                float t = (energyFraction - 0.5f) * 2.0f;
+                return Color.Lerp(MidEnergyColor, HighEnergyColor, t);
+            }
+            else
+            {
+                // Low energy: White → Red
+                float t = energyFraction * 2.0f;
+                return Color.Lerp(LowEnergyColor, MidEnergyColor, t);
+            }
         }
 
         // ====================================================================
@@ -381,7 +412,6 @@ namespace Visualization
                 CumulativeMode = cumulative;
                 ClearTrajectory();
                 SetupLineRenderer(_currentLineRenderer);
-                // Usuni�to SetAgentColor()
             }
         }
 
