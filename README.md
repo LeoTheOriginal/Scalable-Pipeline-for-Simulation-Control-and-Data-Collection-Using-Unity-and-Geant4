@@ -18,7 +18,7 @@
 - **Problem.** Detector design studies need millions of Monte Carlo tracks. Geant4 is the gold standard — and it's slow.
 - **Idea.** Train a Reinforcement Learning agent inside Unity ML Agents to act as a **surrogate generator** that reproduces Geant4-quality electron tracks at a fraction of the cost.
 - **Contribution of this thesis.** A working **pipeline**: a low-latency native bridge between Geant4 (C++) and Unity ML Agents (C# + PyTorch), a physics-informed RL agent (`ElectronAgentPhysics`), and a comparison harness for three RL algorithms (PPO, PPO+LSTM, SAC). Validated on a toy water phantom.
-- **Status.** Engineering thesis defended (2025/2026). Maintained as a baseline for ongoing master's-thesis work.
+- Maintained as a baseline for ongoing master's-thesis work.
 
 ---
 
@@ -206,14 +206,7 @@ cmake .. && cmake --build . --config Release
 mlagents-learn unity/GeantML_Test/Assets/Configs/electron_ppo_v1.yaml --run-id=ppo_v1
 ```
 
-Tested on **Windows**. The DLL bridge is Windows-specific in this iteration — Linux / Docker portability is being explored in follow-up work.
-
----
-
-## Status & what's next
-
-- ✅ **Engineering thesis** — defended; full pipeline functional on Windows for the water-phantom toy detector; PPO / PPO+LSTM / SAC trained and compared; ONNX export working in inference mode.
-- 🟢 **Follow-up work** (in progress): porting to **Linux + Docker**, evaluating **gRPC / TCP / ZeroMQ** transports against the DLL baseline, extending to **richer detector geometries**, and tackling the **fixed-timestep mismatch** between Unity and Geant4.
+Tested on **Windows**. The DLL bridge is Windows-specific in this iteration.
 
 ---
 
