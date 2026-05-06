@@ -56,7 +56,7 @@ flowchart LR
         U1["ElectronAgentPhysics (C#)<br/>3 modes: PhysicsBased ·<br/>Geant4Statistical · Inference"]
         U2["Observation: 7-dim<br/>(pos x,y,z · dir x,y,z · E)"]
         U3["Action: 7-dim continuous<br/>(Δpos · Δmom · ΔE)"]
-        U4["Physics-informed reward<br/>(9 weighted components)"]
+        U4["Three-phase, energy-dependent reward<br/>(initial penetration → transition → deep scattering)"]
         U5["Policy network (PyTorch via mlagents)<br/>+ Curiosity intrinsic signal<br/>+ Scheduled Sampling / Teacher Forcing"]
         U1 --> U2 & U3
         U2 --> U5
@@ -106,14 +106,14 @@ sequenceDiagram
     loop while particle alive in phantom
         A->>T: observation (pos, dir, E)
         T-->>A: action (Δpos, Δmom, ΔE) ∈ ℝ⁷
-        A->>A: physics-informed reward<br/>(9 components: pos · mom · E ·<br/>relativistic E²=p²+m² · direction ·<br/>step size · smoothness · boundary · path)
+        A->>A: three-phase reward<br/>(initial penetration · transition ·<br/>deep scattering — energy-gated)<br/>+ angular diversity · progressive boundary
     end
     A->>A: episode done (energy depleted /<br/>boundary exit / max steps)
     A->>T: episode return + curiosity bonus
     T->>T: backprop · policy update
 ```
 
-The reward function is **physics-informed** rather than purely imitation-based: alongside per-step matching of Geant4 ground truth, it explicitly penalises trajectories that violate the relativistic energy-momentum relation `E² = p² + m²` and rewards smoothness of the angular profile.
+The reward function is **physics-informed** rather than purely imitation-based and is split into three energy-gated phases (*initial penetration* → *transition* → *deep scattering*, switched at `E > 0.75 E₀` and `E ≤ 0.4 E₀`). Each phase shapes a different aspect of the trajectory: forward progress at high energy, balanced scattering during transition, and survival/diversity at low energy. Two cross-cutting mechanisms — *angular-diversity* (anti-mode-collapse) and *progressive boundary penalties* — operate in all phases.
 
 **Scheduled Sampling / Teacher Forcing** is annealed over 10 000 episodes from full ground-truth observations down to 10 % — letting the policy gradually take over while keeping a small ground-truth signal to avoid drift.
 
@@ -161,11 +161,11 @@ Anything tracked in git is **reproducible from simulation**. Large regenerable a
 
 | Layer | Technology | Role |
 |---|---|---|
-| Physics | [**Geant4**](https://geant4.web.cern.ch/) (C++17) with `G4EmLivermorePolarizedPhysics` | Ground-truth radiation transport |
+| Physics | [**Geant4 11.3.0**](https://geant4.web.cern.ch/) (C++17), static-linked, with `G4EmLivermorePolarizedPhysics` | Ground-truth radiation transport |
 | Build | CMake | Geant4 application + DLL build |
 | Bridge | Native **`geant4_plugin.dll`** (Windows, `extern "C"`, 11 exports) | Geant4 ↔ Unity inter-process |
 | Secondary bridge | **MessagePack** + **K4os.Compression.LZ4** | Python-recorded ground-truth ingest |
-| Environment | [**Unity 3D**](https://unity.com/) + [**ML Agents**](https://github.com/Unity-Technologies/ml-agents) | RL world + framework |
+| Environment | [**Unity 2022.3 LTS**](https://unity.com/) + [**ML Agents**](https://github.com/Unity-Technologies/ml-agents) | RL world + framework |
 | Agent code | C# (`ElectronAgentPhysics`, three training modes) | Observations, action space, reward shaping |
 | ML backend | [**PyTorch**](https://pytorch.org/) via `mlagents` trainer | Policy network training |
 | Trained model | **ONNX** (`ElectronBehavior.onnx`) | Inference inside Unity, no Python needed |
@@ -176,15 +176,50 @@ Anything tracked in git is **reproducible from simulation**. Large regenerable a
 
 ## RL algorithms compared
 
-The same observation/action interface is trained with **three algorithms**, each in a dedicated configuration under `unity/GeantML_Test/Assets/Configs/`:
+Three algorithms train on the **same** observation / action interface (configs under `unity/GeantML_Test/Assets/Configs/`) and are compared over **1 million training steps**. The comparison surfaces a fundamental trade-off: standard RL **reward maximisation** vs the Monte Carlo requirement for **stochasticity preservation**.
 
-| Config | Trainer | Family | Why |
+### Algorithms
+
+| Config | Trainer | Family | Why it's tested |
 |---|---|---|---|
-| `electron_ppo_v1.yaml` | **PPO** | On-policy, clipped surrogate | Stable baseline; high entropy (β = 0.15) for full angular coverage; `+ Curiosity` intrinsic signal |
-| `electron_ppo_lstm_v1.yaml` | **PPO + LSTM** | On-policy + recurrent | Adds memory across the trajectory — useful when the next step depends on multi-step history (correlated scattering) |
-| `electron_sac_v1.yaml` | **SAC** | Off-policy, max-entropy | Sample-efficient via 500 k replay buffer; automatic entropy tuning replaces manual β |
+| `electron_ppo_v1.yaml` | **PPO** | On-policy, clipped surrogate `L^CLIP` | Stable baseline; manual entropy via β = 0.15; clipping prevents destructive policy updates |
+| `electron_sac_v1.yaml` | **SAC** | Off-policy, max-entropy framework | Sample-efficient via 500 k replay buffer; *automatic* α tuning theoretically built for exploration |
+| `electron_ppo_lstm_v1.yaml` | **PPO + LSTM** | On-policy + recurrent (hidden state h_t) | Carries trajectory history across steps — designed for patterns like *"after N straight steps, scatter"* |
 
-All three share the network shape (3 hidden layers × 256 units, normalised inputs) and are evaluated against the same Geant4 reference statistics so that algorithmic choices are isolated from environment differences.
+The PPO and SAC feed-forward networks share a 3-layer × 256-unit MLP with normalised inputs; the LSTM variant adds a 128-unit memory state with sequence length 64.
+
+### Final results (1 M steps, smoothed)
+
+| Metric | PPO | SAC | PPO + LSTM |
+|---|---:|---:|---:|
+| **Training performance** | | | |
+| Final cumulative reward | 5,025 | **7,161** | 5,237 |
+| Final episode length (steps) | 237 | 179 | **178** |
+| Steps to 90 % of max reward | 340 k | **75 k** | 125 k |
+| **Stability & exploration** | | | |
+| Reward variance (last 10 %) | 732 | 438 \* | 791 |
+| Final policy entropy | 1.44 | −0.04 | **1.53** |
+| Mode collapse? | No | **Yes (diversity)** | No |
+| **Physical fidelity** | | | |
+| Angular coverage | ~85 % | <20 % | **~90 %** |
+| Stochasticity preserved | High | None | **Very high** |
+| Physical plausibility | Moderate | Low ("laser beam") | **High** |
+
+<sub>\* Low SAC variance reflects deterministic-policy collapse, not stable exploration.</sub>
+
+### Verdict (from the thesis)
+
+The "best" algorithm depends on what is asked of it:
+
+- **SAC — the geometric optimiser.** Highest reward, ~4.5× more sample-efficient than PPO (90 % of max in 75 k vs 340 k steps), shortest paths. But the automatic entropy temperature collapsed to ≈ 0 by ~300 k steps — the policy converged to a deterministic *"laser beam"* through the phantom. Excellent at score maximisation; **fails as a physical simulator** because real electron transport requires angular diversity.
+
+- **PPO — the physically-plausible baseline.** Stable entropy (β = 0.15 fixed), conical beam profile (~±30°), no mode collapse, ~85 % angular coverage. Slower convergence and longer trajectories (237 steps) — the agent struggled to optimise path length while preserving scattering behaviour.
+
+- **PPO + LSTM — the recommended hybrid.** Combines SAC-level trajectory efficiency (178 steps — the shortest) with the *highest* entropy of all three (1.53) and the best angular coverage (~90 %). The recurrent hidden state lets the agent stay globally coherent (low step count) while remaining locally stochastic — exactly the regime that matches Monte Carlo behaviour.
+
+The headline insight from the thesis: **reward-maximising ≠ physically-faithful.** SAC finds the deepest, straightest path; PPO + LSTM produces the closest match to Geant4's *"dandelion"* density profile.
+
+Density-texture comparison plots, full hyperparameter tables, and per-metric training curves are in [`thesis.pdf`](https://github.com/LeoTheOriginal/Scalable-Pipeline-Thesis/blob/main/thesis.pdf) (Chapter 6 — *Results and Validation*).
 
 ---
 
