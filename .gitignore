@@ -40,3 +40,38 @@ shared_data/*.hdf5
 
 projekt_tree.txt
 pipeline.log
+# === Unused figures (not referenced in thesis main.tex) ===
+# Thesis references PNGs only; PDFs in python/figures/ are unused intermediates
+python/figures/*.pdf
+
+# Unused PNG/TeX figures in python/figures/ root
+python/figures/convergence.png
+python/figures/density_textures_3views.png
+python/figures/geant4_full_density_texture.png
+python/figures/highland_analysis.png
+python/figures/lateral_*.png
+python/figures/metrics_comparison.png
+python/figures/path_length_comparison.png
+python/figures/penetration_depth*.png
+python/figures/radial_spread_*.png
+python/figures/scatter_angles.png
+python/figures/stability_analysis.png
+python/figures/unity_*.png
+python/figures/algorithm_comparison.tex
+python/figures/path_length_stats.tex
+
+# Density-texture intermediate frames — thesis uses 4 timestamps per algorithm
+python/figures/plots/ppo/*
+!python/figures/plots/ppo/ppo_base_v1_0049842_steps.png
+!python/figures/plots/ppo/ppo_base_v1_0349889_steps.png
+!python/figures/plots/ppo/ppo_base_v1_0699951_steps.png
+!python/figures/plots/ppo/ppo_base_v1_1000068_steps.png
+
+python/figures/plots/sac/*
+!python/figures/plots/sac/sac_base_v1_0049855_steps.png
+!python/figures/plots/sac/sac_base_v1_0349803_steps.png
+!python/figures/plots/sac/sac_base_v1_0699953_steps.png
+!python/figures/plots/sac/sac_base_v1_1000013_steps.png
+
+# PPO+LSTM density textures — not referenced in thesis
+python/figures/plots/ppo_lstm/
