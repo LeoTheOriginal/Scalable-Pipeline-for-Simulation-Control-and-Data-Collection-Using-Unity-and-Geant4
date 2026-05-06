@@ -210,6 +210,15 @@ Tested on **Windows**. The DLL bridge is Windows-specific in this iteration.
 
 ---
 
+## Thesis paper
+
+Full engineering thesis (LaTeX sources + compiled PDF):
+
+- [**Scalable-Pipeline-Thesis**](https://github.com/LeoTheOriginal/Scalable-Pipeline-Thesis) — LaTeX sources
+- [**thesis.pdf**](https://github.com/LeoTheOriginal/Scalable-Pipeline-Thesis/blob/main/thesis.pdf) — compiled PDF
+
+---
+
 ## License & use
 
-Private repository — all rights reserved (academic work, AGH UST). For collaboration or citation, please contact the author.
+All rights reserved (academic work, AGH UST). For collaboration or citation, please contact the author.
