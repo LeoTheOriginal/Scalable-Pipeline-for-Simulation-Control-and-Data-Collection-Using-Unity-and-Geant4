@@ -5,9 +5,9 @@
 <sub>Engineering thesis · Faculty of Physics and Applied Computer Science · AGH University of Science and Technology · 2025/2026</sub>
 <sub>Author: **Dawid Piotrowski** ([@LeoTheOriginal](https://github.com/LeoTheOriginal))</sub>
 
-[![Geant4](https://img.shields.io/badge/Geant4-physics-005C9C?style=flat-square)](https://geant4.web.cern.ch/)
+[![Geant4](https://img.shields.io/badge/Geant4-Livermore_EM-005C9C?style=flat-square)](https://geant4.web.cern.ch/)
 [![Unity](https://img.shields.io/badge/Unity-ML_Agents-000000?style=flat-square&logo=unity)](https://github.com/Unity-Technologies/ml-agents)
-[![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-PPO_·_PPO+LSTM_·_SAC-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=flat-square&logo=cplusplus&logoColor=white)](https://isocpp.org/)
 [![C#](https://img.shields.io/badge/C%23-Unity-239120?style=flat-square&logo=csharp)](https://learn.microsoft.com/dotnet/csharp/)
 
@@ -16,9 +16,21 @@
 ## At a glance
 
 - **Problem.** Detector design studies need millions of Monte Carlo tracks. Geant4 is the gold standard — and it's slow.
-- **Idea.** Train a Reinforcement Learning agent inside Unity ML Agents to act as a **surrogate generator** that reproduces Geant4-quality tracks at a fraction of the cost.
-- **Contribution of this thesis.** The **pipeline** itself: a working, low-latency bridge between Geant4 (C++) and Unity ML Agents (C# + PyTorch), validated on a toy water phantom. The physics question is the next step — that's the master's thesis.
+- **Idea.** Train a Reinforcement Learning agent inside Unity ML Agents to act as a **surrogate generator** that reproduces Geant4-quality electron tracks at a fraction of the cost.
+- **Contribution of this thesis.** A working **pipeline**: a low-latency native bridge between Geant4 (C++) and Unity ML Agents (C# + PyTorch), a physics-informed RL agent (`ElectronAgentPhysics`), and a comparison harness for three RL algorithms (PPO, PPO+LSTM, SAC). Validated on a toy water phantom.
 - **Status.** Engineering thesis defended (2025/2026). Maintained as a baseline for ongoing master's-thesis work.
+
+---
+
+## Concrete setup (what's actually simulated)
+
+| | Value |
+|---|---|
+| Phantom | **10 × 10 × 10 cm³** water box (NIST `G4_WATER`), centred at origin in a 30³ cm³ air world |
+| Primary | **Single electron**, **10 MeV** kinetic energy, perpendicular incidence at `(−6, 0, 0)` cm |
+| Geant4 physics list | `G4EmLivermorePolarizedPhysics` (precise low-energy EM) with default 1 mm production cut |
+| Per-step record | `position`, `momentum`, `kineticEnergy`, `energyDeposited`, `scatterAngle`, `processName` |
+| Wire format | **7 floats per step** — `[x, y, z, px, py, pz, E_kin]` in cm / MeV |
 
 ---
 
@@ -28,37 +40,41 @@
 flowchart LR
     subgraph G["Geant4 — ground truth physics"]
         direction TB
-        G1["Water-Phantom<br/>geometry (C++)"]
-        G2["Primary generator<br/>particle gun"]
-        G3["Step-by-step<br/>tracking"]
+        G1["Water-Phantom<br/>10×10×10 cm³ (C++)"]
+        G2["Particle gun:<br/>10 MeV e⁻ at (−6,0,0)"]
+        G3["G4EmLivermorePolarizedPhysics<br/>step-by-step tracking"]
         G1 --> G2 --> G3
     end
 
-    subgraph B["Bridge"]
+    subgraph B["Native Bridge (geant4_plugin.dll)"]
         direction TB
-        B1["Native Windows DLL<br/><i>in-process, low-latency</i>"]
+        B1["11 exported C functions:<br/>InitGeant4 · RunSimulationBatch<br/>RunBatchSimulation · GetBatchStatistics<br/>GetBatchTrajectoryData · GetLateralDistribution<br/>ExportStatisticsToFile · BenchmarkGeant4Performance · …"]
     end
 
     subgraph U["Unity 3D + ML Agents"]
         direction TB
-        U1["C# Agent<br/>observations &amp; rewards"]
-        U2["Policy network<br/>(PyTorch via mlagents)"]
-        U3["Action: next step<br/>(Δx, Δy, Δz, |Δs|)"]
-        U1 --> U2 --> U3
+        U1["ElectronAgentPhysics (C#)<br/>3 modes: PhysicsBased ·<br/>Geant4Statistical · Inference"]
+        U2["Observation: 7-dim<br/>(pos x,y,z · dir x,y,z · E)"]
+        U3["Action: 7-dim continuous<br/>(Δpos · Δmom · ΔE)"]
+        U4["Physics-informed reward<br/>(9 weighted components)"]
+        U5["Policy network (PyTorch via mlagents)<br/>+ Curiosity intrinsic signal<br/>+ Scheduled Sampling / Teacher Forcing"]
+        U1 --> U2 & U3
+        U2 --> U5
+        U3 --> U4 --> U5
     end
 
     subgraph A["Python analysis"]
         direction TB
-        A1["pandas / NumPy"]
-        A2["track &amp; energy metrics"]
-        A3["matplotlib + TikZ<br/>→ thesis figures"]
+        A1["pandas / NumPy<br/>+ NIST water reference data"]
+        A2["track, lateral spread, energy<br/>and convergence metrics"]
+        A3["matplotlib + TikZ export<br/>→ thesis figures"]
         A1 --> A2 --> A3
     end
 
-    G3 -- "per-step<br/>(E, p, position)" --> B1
+    G3 -- "RunSimulationBatch<br/>(7 floats × N steps)" --> B1
     B1 --> U1
-    U3 -. "trained policy" .-> A1
-    G3 -. "reference tracks" .-> A1
+    U5 -. "ElectronBehavior.onnx<br/>(trained, runs without Geant4)" .-> A1
+    G3 -. "reference tracks (CSV)" .-> A1
 
     classDef g fill:#0d3b66,stroke:#0d3b66,color:#fff;
     classDef b fill:#7d4f50,stroke:#7d4f50,color:#fff;
@@ -66,11 +82,11 @@ flowchart LR
     classDef a fill:#1f5f3f,stroke:#1f5f3f,color:#fff;
     class G1,G2,G3 g;
     class B1 b;
-    class U1,U2,U3 u;
+    class U1,U2,U3,U4,U5 u;
     class A1,A2,A3 a;
 ```
 
-The choice of a **native DLL bridge** (rather than gRPC + Protobuf, also evaluated during the project) keeps inter-process overhead in the µs range, which matters when an episode can produce thousands of physics steps per particle.
+The native DLL (`geant4_plugin.dll`, called from C# via `DllImport`) was chosen over gRPC + Protobuf alternatives explored during the project — direct in-process float-buffer exchange keeps inter-process overhead in the µs range, which matters when an episode produces hundreds of physics steps per particle. A secondary **MessagePack + LZ4** path (`Core.TrajectoryBatch` in C#, the `MessagePack` and `K4os.Compression.LZ4` NuGet packages) is wired for batch loading of pre-recorded Python ground-truth datasets.
 
 ---
 
@@ -81,24 +97,25 @@ sequenceDiagram
     autonumber
     participant G as Geant4 (C++)
     participant D as DLL bridge
-    participant A as Unity Agent (C#)
+    participant A as ElectronAgentPhysics (C#)
     participant T as mlagents trainer (Python / PyTorch)
 
-    G->>D: spawn primary (E₀, direction)
-    D->>A: initial 4-vector
+    G->>D: BeamOn(1)  spawn 10 MeV e⁻
+    D->>A: trajectory buffer (7 floats × N steps)
+    Note over A: Scheduled Sampling decides:<br/>ground-truth observation (teacher) vs<br/>agent's own predicted state
     loop while particle alive in phantom
-        G->>D: step (E, p, x, y, z, ΔE)
-        D->>A: observation vector
-        A->>T: state
-        T-->>A: action (Δx, Δy, Δz, |Δs|)
-        A->>A: reward = match(ΔE, trajectory)
+        A->>T: observation (pos, dir, E)
+        T-->>A: action (Δpos, Δmom, ΔE) ∈ ℝ⁷
+        A->>A: physics-informed reward<br/>(9 components: pos · mom · E ·<br/>relativistic E²=p²+m² · direction ·<br/>step size · smoothness · boundary · path)
     end
-    G->>A: terminate (escape / energy < cutoff)
-    A->>T: episode return
+    A->>A: episode done (energy depleted /<br/>boundary exit / max steps)
+    A->>T: episode return + curiosity bonus
     T->>T: backprop · policy update
 ```
 
-Key insight from this iteration: **on-the-fly streaming** (no buffering to disk) was a *dream-scenario* assumption at the start, and turned out to work — the design was ready to fall back to a buffered dataset if the realtime pipeline couldn't keep up. It does, comfortably.
+The reward function is **physics-informed** rather than purely imitation-based: alongside per-step matching of Geant4 ground truth, it explicitly penalises trajectories that violate the relativistic energy-momentum relation `E² = p² + m²` and rewards smoothness of the angular profile.
+
+**Scheduled Sampling / Teacher Forcing** is annealed over 10 000 episodes from full ground-truth observations down to 10 % — letting the policy gradually take over while keeping a small ground-truth signal to avoid drift.
 
 ---
 
@@ -107,22 +124,33 @@ Key insight from this iteration: **on-the-fly streaming** (no buffering to disk)
 ```
 .
 ├── geant4/
-│   └── Water-Phantom/        # Geant4 application: cubic water volume,
-│                             # primary particle gun, per-step instrumentation
-│                             # exposing (E, p, x) over the bridge
+│   └── Water-Phantom/                 # Geant4 application:
+│       ├── src/Geant4Plugin.cc        #   the DLL bridge (11 C exports)
+│       ├── src/SteppingAction.cc      #   per-step instrumentation
+│       ├── src/PhysicsList.cc         #   G4EmLivermorePolarizedPhysics
+│       ├── src/DetectorConstruction.cc#   10×10×10 cm³ water phantom
+│       └── src/PrimaryGeneratorAction.cc # 10 MeV electron, +X
 │
 ├── unity/
-│   └── GeantML_Test/         # Unity project + ML Agents integration
-│                             # (C# Agent, observation parser, training scenes)
+│   └── GeantML_Test/Assets/Scripts/
+│       ├── Agents/ElectronAgentPhysics.cs  # main RL agent (V6)
+│       ├── Agents/NormalDistributionRewards.cs # Gaussian-PDF reward helpers
+│       ├── Core/Geant4Interface.cs    # P/Invoke into geant4_plugin.dll
+│       ├── Core/Geant4Manager.cs      # Geant4 lifecycle (singleton)
+│       ├── Core/DataModels.cs         # MessagePack types for batch ingest
+│       ├── Visualization/             # trajectory + density visualisers
+│       └── Benchmarking/              # PerformanceBenchmark.cs
 │
 ├── python/
-│   ├── data/                 # processed datasets and exports
-│   ├── metrics/              # evaluation metrics (track length, energy deposit, …)
-│   └── figures/              # plots + TikZ for the thesis report
+│   ├── data/                          # geant4 + ppo/sac trajectories,
+│   │                                  # nist_water_data.txt, performance JSON
+│   ├── metrics/                       # mode-collapse + JSON metric extractors
+│   └── figures/                       # plotting scripts + PDF/PNG/TikZ outputs
 │
-├── environment.yaml          # conda env (mlagents + scientific Python stack)
-└── .gitignore                # excludes Unity Library/Temp/Build, Geant4 build/,
-                              # IDE clutter, large regenerable datasets
+├── environment.yaml                   # conda env (mlagents + scientific Python)
+└── .gitignore                         # excludes Unity Library/Temp/Build,
+                                       # Geant4 build/, IDE clutter,
+                                       # large regenerable datasets
 ```
 
 Anything tracked in git is **reproducible from simulation**. Large regenerable artefacts (raw point clouds, density textures, intermediate `*.csv` event dumps, ROOT/HDF5 shared data) are kept out by design.
@@ -133,14 +161,30 @@ Anything tracked in git is **reproducible from simulation**. Large regenerable a
 
 | Layer | Technology | Role |
 |---|---|---|
-| Physics | [**Geant4**](https://geant4.web.cern.ch/) (C++) | Ground-truth radiation transport |
-| Build | CMake | Geant4 application build |
+| Physics | [**Geant4**](https://geant4.web.cern.ch/) (C++17) with `G4EmLivermorePolarizedPhysics` | Ground-truth radiation transport |
+| Build | CMake | Geant4 application + DLL build |
+| Bridge | Native **`geant4_plugin.dll`** (Windows, `extern "C"`, 11 exports) | Geant4 ↔ Unity inter-process |
+| Secondary bridge | **MessagePack** + **K4os.Compression.LZ4** | Python-recorded ground-truth ingest |
 | Environment | [**Unity 3D**](https://unity.com/) + [**ML Agents**](https://github.com/Unity-Technologies/ml-agents) | RL world + framework |
-| Agent code | C# (Unity scripts) | Observation parsing, reward shaping |
-| ML backend | [**PyTorch**](https://pytorch.org/) (via `mlagents`) | Policy network training |
-| Bridge | Native **DLL** (Windows) | Geant4 ↔ Unity inter-process |
-| Analysis | Python (pandas, NumPy, matplotlib) | Metrics, plots |
+| Agent code | C# (`ElectronAgentPhysics`, three training modes) | Observations, action space, reward shaping |
+| ML backend | [**PyTorch**](https://pytorch.org/) via `mlagents` trainer | Policy network training |
+| Trained model | **ONNX** (`ElectronBehavior.onnx`) | Inference inside Unity, no Python needed |
+| Analysis | Python (pandas, NumPy, matplotlib) | Metrics, plots, mode-collapse detection |
 | Reporting | TikZ figure export (`*.tex`) | Direct inclusion in LaTeX thesis |
+
+---
+
+## RL algorithms compared
+
+The same observation/action interface is trained with **three algorithms**, each in a dedicated configuration under `unity/GeantML_Test/Assets/Configs/`:
+
+| Config | Trainer | Family | Why |
+|---|---|---|---|
+| `electron_ppo_v1.yaml` | **PPO** | On-policy, clipped surrogate | Stable baseline; high entropy (β = 0.15) for full angular coverage; `+ Curiosity` intrinsic signal |
+| `electron_ppo_lstm_v1.yaml` | **PPO + LSTM** | On-policy + recurrent | Adds memory across the trajectory — useful when the next step depends on multi-step history (correlated scattering) |
+| `electron_sac_v1.yaml` | **SAC** | Off-policy, max-entropy | Sample-efficient via 500 k replay buffer; automatic entropy tuning replaces manual β |
+
+All three share the network shape (3 hidden layers × 256 units, normalised inputs) and are evaluated against the same Geant4 reference statistics so that algorithmic choices are isolated from environment differences.
 
 ---
 
@@ -151,35 +195,25 @@ Anything tracked in git is **reproducible from simulation**. Large regenerable a
 conda env create -f environment.yaml
 conda activate ml-agents
 
-# 2. Geant4 — build the Water-Phantom application
+# 2. Geant4 — build the Water-Phantom application + the bridge DLL
 cd geant4/Water-Phantom
 mkdir build && cd build
 cmake .. && cmake --build . --config Release
+#   produces geant4_plugin.dll, picked up by Unity at runtime
 
 # 3. Unity — open unity/GeantML_Test in Unity Hub (matching ML Agents version)
-#    Run training from the included scene; the DLL bridge wires Geant4 → Agent automatically.
+#    pick a training scene, then from a separate shell:
+mlagents-learn unity/GeantML_Test/Assets/Configs/electron_ppo_v1.yaml --run-id=ppo_v1
 ```
 
 Tested on **Windows**. The DLL bridge is Windows-specific in this iteration — Linux / Docker portability is being explored in follow-up work.
 
 ---
 
-## Geant4 vs RL surrogate — the trade space
-
-| | Geant4 (ground truth) | RL surrogate *(this thesis is the baseline)* |
-|---|---|---|
-| Per-track latency | ~ms | (target) ~µs |
-| Physics fidelity | full Bethe-Bloch + multiple scattering + secondaries | learned approximation, single-particle regime |
-| Determinism | stochastic Monte Carlo | deterministic policy + ε-exploration |
-| Geometry coupling | tight (CAD ↔ Geant4) | loose (agent learns per geometry) |
-| Use case | validation, calibration | high-throughput detector efficiency studies |
-
----
-
 ## Status & what's next
 
-- ✅ **Engineering thesis** — defended, full pipeline functional on Windows for the water-phantom toy detector.
-- 🟢 **Follow-up work** (in progress): porting to **Linux + Docker**, evaluating **gRPC / TCP / ZeroMQ** transports against the DLL baseline, extending to **richer detector geometries** (muon chamber, LArTPC candidate), and tackling the **fixed-timestep mismatch** between Unity and Geant4.
+- ✅ **Engineering thesis** — defended; full pipeline functional on Windows for the water-phantom toy detector; PPO / PPO+LSTM / SAC trained and compared; ONNX export working in inference mode.
+- 🟢 **Follow-up work** (in progress): porting to **Linux + Docker**, evaluating **gRPC / TCP / ZeroMQ** transports against the DLL baseline, extending to **richer detector geometries**, and tackling the **fixed-timestep mismatch** between Unity and Geant4.
 
 ---
 
